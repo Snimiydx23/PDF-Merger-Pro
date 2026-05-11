@@ -827,48 +827,60 @@ table.scan-tbl tr:nth-child(even) td{background:var(--opt-bg);}
     </div>
   </div>
 
-  <!-- PDF TO WORD / PPT / EXCEL — info panels -->
+  <!-- PDF TO WORD -->
   <div class="tool-panel" id="panel-pdf-to-word">
-    <div class="panel-header purple"><h2>📝 PDF to Word</h2><p>PDF ko editable Word document mein convert karein</p></div>
+    <div class="panel-header purple"><h2>📝 PDF to Word</h2><p>PDF ko editable .docx Word document mein convert karein</p></div>
     <div class="panel-body">
-      <div class="info-box">
-        ℹ️ <strong>Browser Limitation:</strong> PDF to Word conversion ke liye complex server-side processing chahiye jo browser mein possible nahi hai.<br><br>
-        <strong>Best Free Options:</strong><br>
-        1. <strong>Microsoft Word</strong> → Open → PDF file select karein (auto convert)<br>
-        2. <a href="https://smallpdf.com/pdf-to-word" target="_blank" style="color:#7c3aed;">smallpdf.com</a><br>
-        3. <a href="https://www.ilovepdf.com/pdf_to_word" target="_blank" style="color:#7c3aed;">ilovepdf.com</a><br>
-        4. Google Drive → Upload PDF → Right click → Open with Google Docs
+      <div class="drop-zone" id="pdfToWordDropZone" ondragover="handleDragOver(event,'pdfToWordDropZone')" ondragleave="handleDragLeave(event,'pdfToWordDropZone')" ondrop="handleFileDrop(event,'pdf-to-word')">
+        <span class="dz-icon">📁</span><h3>Drop a PDF file here</h3><p>PDF file yahan drop karein ya select karein</p>
+        <button class="btn-select purple" onclick="document.getElementById('pdfToWordInput').click()">Select PDF File</button>
+        <input type="file" id="pdfToWordInput" accept=".pdf" onchange="addSingleFile(event,'pdf-to-word')">
       </div>
-      <div class="info-box" style="margin-top:10px;">
-        💡 <strong>Alt:</strong> PDF ka text aap <strong>AI Summarizer</strong> tool se extract kar sakte hain!
-        <br><button class="btn-sm purple" style="margin-top:8px;" onclick="switchCat('intelligence',null);openToolInSec('ai-summarizer',null,'intelligence')">🤖 AI Tool Open Karein</button>
+      <div id="pdf-to-wordFileList" class="file-list"></div>
+      <div class="action-row">
+        <button class="btn-clear" onclick="clearSingleTool('pdf-to-word')">🗑 Clear</button>
+        <button class="btn-main purple" id="pdfToWordBtn" onclick="convertPDFtoWord()" disabled>📝 Convert to Word</button>
       </div>
+      <div class="progress-wrap" id="pdf-to-wordProgress"><div class="progress-status" id="pdf-to-wordProgressStatus"></div><div class="progress-bar-bg"><div class="progress-bar-fill purple" id="pdf-to-wordProgressFill"></div></div></div>
+      <div class="result-box" id="pdf-to-wordResult"><h4>✅ Word File Ready!</h4><p id="pdf-to-wordResultInfo"></p><div id="pdf-to-wordDownloadBtns"></div></div>
     </div>
   </div>
 
+  <!-- PDF TO PPT -->
   <div class="tool-panel" id="panel-pdf-to-ppt">
-    <div class="panel-header purple"><h2>📊 PDF to PowerPoint</h2><p>PDF pages ko PPT slides mein convert karein</p></div>
+    <div class="panel-header purple"><h2>📊 PDF to PowerPoint</h2><p>PDF pages ko .pptx slides mein convert karein</p></div>
     <div class="panel-body">
-      <div class="info-box">
-        ℹ️ <strong>Browser Limitation:</strong> PDF to PPT conversion server-side tool chahiye.<br><br>
-        <strong>Best Options:</strong><br>
-        1. <a href="https://www.ilovepdf.com/pdf_to_powerpoint" target="_blank" style="color:#7c3aed;">ilovepdf.com</a><br>
-        2. Adobe Acrobat (paid)<br>
-        3. <a href="https://smallpdf.com/pdf-to-ppt" target="_blank" style="color:#7c3aed;">smallpdf.com</a>
+      <div class="drop-zone" id="pdfToPptDropZone" ondragover="handleDragOver(event,'pdfToPptDropZone')" ondragleave="handleDragLeave(event,'pdfToPptDropZone')" ondrop="handleFileDrop(event,'pdf-to-ppt')">
+        <span class="dz-icon">📁</span><h3>Drop a PDF file here</h3><p>Har PDF page ek slide banega</p>
+        <button class="btn-select purple" onclick="document.getElementById('pdfToPptInput').click()">Select PDF File</button>
+        <input type="file" id="pdfToPptInput" accept=".pdf" onchange="addSingleFile(event,'pdf-to-ppt')">
       </div>
+      <div id="pdf-to-pptFileList" class="file-list"></div>
+      <div class="action-row">
+        <button class="btn-clear" onclick="clearSingleTool('pdf-to-ppt')">🗑 Clear</button>
+        <button class="btn-main purple" id="pdfToPptBtn" onclick="convertPDFtoPPT()" disabled>📊 Convert to PPT</button>
+      </div>
+      <div class="progress-wrap" id="pdf-to-pptProgress"><div class="progress-status" id="pdf-to-pptProgressStatus"></div><div class="progress-bar-bg"><div class="progress-bar-fill purple" id="pdf-to-pptProgressFill"></div></div></div>
+      <div class="result-box" id="pdf-to-pptResult"><h4>✅ PowerPoint Ready!</h4><p id="pdf-to-pptResultInfo"></p><div id="pdf-to-pptDownloadBtns"></div></div>
     </div>
   </div>
 
+  <!-- PDF TO EXCEL -->
   <div class="tool-panel" id="panel-pdf-to-excel">
-    <div class="panel-header purple"><h2>📈 PDF to Excel</h2><p>PDF tables ko editable Excel mein convert karein</p></div>
+    <div class="panel-header purple"><h2>📈 PDF to Excel</h2><p>PDF tables ko editable .xlsx Excel mein convert karein</p></div>
     <div class="panel-body">
-      <div class="info-box">
-        ℹ️ <strong>Browser Limitation:</strong> PDF table extraction ke liye server-side processing chahiye.<br><br>
-        <strong>Best Options:</strong><br>
-        1. <a href="https://www.ilovepdf.com/pdf_to_excel" target="_blank" style="color:#7c3aed;">ilovepdf.com</a><br>
-        2. Adobe Acrobat (paid)<br>
-        3. <a href="https://smallpdf.com/pdf-to-excel" target="_blank" style="color:#7c3aed;">smallpdf.com</a>
+      <div class="drop-zone" id="pdfToExcelDropZone" ondragover="handleDragOver(event,'pdfToExcelDropZone')" ondragleave="handleDragLeave(event,'pdfToExcelDropZone')" ondrop="handleFileDrop(event,'pdf-to-excel')">
+        <span class="dz-icon">📁</span><h3>Drop a PDF file here</h3><p>PDF ke tables extract hokar Excel mein jayenge</p>
+        <button class="btn-select purple" onclick="document.getElementById('pdfToExcelInput').click()">Select PDF File</button>
+        <input type="file" id="pdfToExcelInput" accept=".pdf" onchange="addSingleFile(event,'pdf-to-excel')">
       </div>
+      <div id="pdf-to-excelFileList" class="file-list"></div>
+      <div class="action-row">
+        <button class="btn-clear" onclick="clearSingleTool('pdf-to-excel')">🗑 Clear</button>
+        <button class="btn-main purple" id="pdfToExcelBtn" onclick="convertPDFtoExcel()" disabled>📈 Convert to Excel</button>
+      </div>
+      <div class="progress-wrap" id="pdf-to-excelProgress"><div class="progress-status" id="pdf-to-excelProgressStatus"></div><div class="progress-bar-bg"><div class="progress-bar-fill purple" id="pdf-to-excelProgressFill"></div></div></div>
+      <div class="result-box" id="pdf-to-excelResult"><h4>✅ Excel File Ready!</h4><p id="pdf-to-excelResultInfo"></p><div id="pdf-to-excelDownloadBtns"></div></div>
     </div>
   </div>
 
@@ -1392,60 +1404,90 @@ table.scan-tbl tr:nth-child(even) td{background:var(--opt-bg);}
 <!-- ====== SCANNER SECTION ====== -->
 <div class="tool-section" id="sec-scanner">
   <div class="tool-panel active" id="panel-scanner-main">
-    <div class="panel-header scanner"><h2>📷 Document Scanner</h2><p>Camera se document scan karein → enhance → PDF banayein → Merge mein bhejein</p></div>
+    <div class="panel-header scanner"><h2>📷 Document Scanner</h2><p>Camera se scan → crop/edit → effects → PDF banao</p></div>
     <div class="panel-body">
-      <div id="scannerCameraSection">
-        <div id="scannerPlaceholder" class="cam-placeholder">
-          <span class="cam-icon">📷</span>
-          <h3 style="font-size:15px;font-weight:700;">Camera se Scan Karein</h3>
-          <p style="font-size:12px;color:var(--muted);max-width:260px;">Document ko flat surface par rakhein</p>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:6px;">
-            <button class="btn-capture" onclick="startCamera('environment')">📷 Camera Start</button>
-            <button class="btn-cam-switch" onclick="document.getElementById('scannerImageInput').click()">🖼️ Gallery se Add</button>
-            <input type="file" id="scannerImageInput" accept="image/*" multiple onchange="addImagesFromGallery(event)">
-          </div>
+
+      <!-- CAMERA AREA -->
+      <div id="scannerPlaceholder" class="cam-placeholder">
+        <span class="cam-icon">📷</span>
+        <h3 style="font-size:15px;font-weight:700;">Camera se Scan Karein</h3>
+        <p style="font-size:12px;color:var(--muted);max-width:260px;">Document ko flat surface par rakhein aur camera start karein</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:10px;">
+          <button class="btn-capture" onclick="startCamera()">📷 Camera Start</button>
+          <button class="btn-cam-switch" onclick="document.getElementById('scannerImageInput').click()">🖼️ Gallery se Add</button>
+          <input type="file" id="scannerImageInput" accept="image/*" multiple onchange="addImagesFromGallery(event)">
         </div>
-        <div id="scannerLiveWrap" style="display:none;">
-          <div class="camera-wrap">
-            <video id="cameraVideo" autoplay playsinline muted></video>
-            <div class="camera-overlay">
-              <div class="camera-corners"><div class="corner-tr"></div><div class="corner-bl"></div></div>
-              <div class="scan-line"></div>
-            </div>
-          </div>
-          <div style="text-align:center;font-size:11px;color:var(--muted);margin-top:5px;">Document ko frame ke andar rakhein</div>
-          <div class="camera-btns">
-            <button class="btn-cam-switch" onclick="switchCamera()">🔄 Switch Camera</button>
-            <button class="btn-capture" onclick="captureFrame()">📸 Capture</button>
-            <button class="btn-cam-switch" onclick="stopCamera()">✕ Band</button>
-          </div>
-        </div>
-        <div id="captureFlash" style="position:fixed;inset:0;background:white;opacity:0;pointer-events:none;z-index:9999;transition:opacity .15s;"></div>
       </div>
+
+      <!-- LIVE CAMERA VIEW -->
+      <div id="scannerLiveWrap" style="display:none;">
+        <div class="camera-wrap" id="cameraWrap">
+          <video id="cameraVideo" autoplay playsinline muted style="width:100%;height:100%;object-fit:cover;display:block;"></video>
+          <div class="camera-overlay">
+            <div class="camera-corners"><div class="corner-tr"></div><div class="corner-bl"></div></div>
+            <div class="scan-line"></div>
+          </div>
+        </div>
+        <div style="text-align:center;font-size:11px;color:var(--muted);margin-top:5px;">Document ko frame ke andar rakhein</div>
+        <div class="camera-btns">
+          <button class="btn-cam-switch" onclick="switchCamera()">🔄 Switch Camera</button>
+          <button class="btn-capture" onclick="captureFrame()">📸 Capture</button>
+          <button class="btn-cam-switch" onclick="stopCamera()">✕ Band Karo</button>
+        </div>
+      </div>
+      <div id="captureFlash" style="position:fixed;inset:0;background:white;opacity:0;pointer-events:none;z-index:9999;transition:opacity .15s;"></div>
+
+      <!-- SCANNED PAGES -->
       <div id="scannedPagesSection" style="display:none;margin-top:16px;">
-        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:6px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:8px;">
           <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;">📄 Scanned Pages (<span id="scannedCount">0</span>)</div>
           <div style="display:flex;gap:6px;flex-wrap:wrap;">
-            <button class="btn-cam-switch" style="font-size:11px;padding:5px 10px;" onclick="document.getElementById('scannerImageInput').click()">+ Add More</button>
+            <button class="btn-cam-switch" style="font-size:11px;padding:5px 10px;" onclick="startCamera()">📷 More Scan</button>
+            <button class="btn-cam-switch" style="font-size:11px;padding:5px 10px;" onclick="document.getElementById('scannerImageInput').click()">+ Gallery</button>
             <button class="btn-sm grey" onclick="clearAllScanned()">🗑 Clear All</button>
           </div>
         </div>
-        <div class="options-panel" style="margin-top:0;margin-bottom:10px;">
-          <div class="options-title">✨ Enhancement</div>
+
+        <!-- EFFECTS -->
+        <div class="options-panel" style="margin-bottom:10px;">
+          <div class="options-title">✨ Enhancement (sabhi pages pe apply hoga)</div>
           <div class="enhance-row">
-            <button class="enhance-btn active" id="enhNone" onclick="setEnhance('none')">🖼 Original</button>
-            <button class="enhance-btn" id="enhGray" onclick="setEnhance('gray')">⬜ Grayscale</button>
-            <button class="enhance-btn" id="enhContrast" onclick="setEnhance('contrast')">🔲 High Contrast</button>
-            <button class="enhance-btn" id="enhBW" onclick="setEnhance('bw')">📄 B&W</button>
-            <button class="enhance-btn" id="enhSharp" onclick="setEnhance('sharp')">✨ Sharpen</button>
+            <button class="enhance-btn active" id="enhNone" onclick="setEnhance('none',this)">🖼 Original</button>
+            <button class="enhance-btn" id="enhLighten" onclick="setEnhance('lighten',this)">☀️ Lighten</button>
+            <button class="enhance-btn" id="enhMoreLight" onclick="setEnhance('morelight',this)">🌟 More Light</button>
+            <button class="enhance-btn" id="enhGray" onclick="setEnhance('gray',this)">⬜ Grayscale</button>
+            <button class="enhance-btn" id="enhContrast" onclick="setEnhance('contrast',this)">🔲 High Contrast</button>
+            <button class="enhance-btn" id="enhBW" onclick="setEnhance('bw',this)">📄 B&W</button>
+            <button class="enhance-btn" id="enhSharp" onclick="setEnhance('sharp',this)">✨ Sharpen</button>
           </div>
         </div>
+
+        <!-- PAGES GRID -->
         <div class="scanned-grid" id="scannedGrid"></div>
+
+        <!-- CROP/EDIT MODAL -->
+        <div id="cropModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:1000;display:none;align-items:center;justify-content:center;flex-direction:column;padding:16px;">
+          <div style="background:var(--white);border-radius:16px;padding:16px;max-width:500px;width:100%;max-height:90vh;overflow-y:auto;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+              <h3 style="font-size:15px;font-weight:700;">✂️ Edit Page</h3>
+              <button class="btn-icon" onclick="closeCropModal()">✕</button>
+            </div>
+            <canvas id="cropCanvas" style="width:100%;border-radius:8px;border:2px solid var(--border);cursor:crosshair;touch-action:none;"></canvas>
+            <div style="margin-top:10px;font-size:12px;color:var(--muted);text-align:center;">Drag to select crop area. Leave empty for no crop.</div>
+            <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
+              <button class="btn-sm" onclick="rotateCropCanvas()">🔄 Rotate 90°</button>
+              <button class="btn-sm grey" onclick="resetCrop()">↩ Reset</button>
+              <button class="btn-sm green" onclick="applyCrop()" style="flex:1;">✅ Apply</button>
+            </div>
+          </div>
+        </div>
+
         <div class="action-row" style="margin-top:16px;">
           <button class="btn-clear" onclick="clearAllScanned()">🗑 Clear</button>
-          <button class="btn-main navy" onclick="buildScannerPDF()">📄 PDF Banao</button>
+          <button class="btn-main navy" id="buildPdfBtn" onclick="buildScannerPDF()">📄 PDF Banao</button>
           <button class="btn-main" onclick="sendScannerToMerge()">🔗 Merge Mein Bhejo</button>
         </div>
+
         <div class="progress-wrap" id="scannerProgress">
           <div class="progress-status" id="scannerProgressStatus">Building PDF...</div>
           <div class="progress-bar-bg"><div class="progress-bar-fill" style="background:linear-gradient(90deg,#0ea5e9,#6366f1);" id="scannerProgressFill"></div></div>
@@ -1585,7 +1627,7 @@ function handleDragOver(e,zid){e.preventDefault();var el=document.getElementById
 function handleDragLeave(e,zid){var el=document.getElementById(zid);if(el)el.classList.remove('dragover');}
 function handleFileDrop(e,tool){
   e.preventDefault();
-  var allDZ=['mergeDropZone','sizeDropZone','pagesDropZone','singleDropZone','compressDropZone','clientDropZone','pdfToJpgDropZone','pdfaDropZone','rotateDropZone','pnDropZone','wmDropZone','cropDropZone','metaDropZone','unlockDropZone','protectDropZone','signDropZone','redactDropZone','aiDropZone','transDropZone'];
+  var allDZ=['mergeDropZone','sizeDropZone','pagesDropZone','singleDropZone','compressDropZone','clientDropZone','pdfToJpgDropZone','pdfaDropZone','rotateDropZone','pnDropZone','wmDropZone','cropDropZone','metaDropZone','unlockDropZone','protectDropZone','signDropZone','redactDropZone','aiDropZone','transDropZone','pdfToWordDropZone','pdfToPptDropZone','pdfToExcelDropZone'];
   allDZ.forEach(function(id){var el=document.getElementById(id);if(el)el.classList.remove('dragover');});
   var files=Array.from(e.dataTransfer.files).filter(function(f){return f.name.toLowerCase().endsWith('.pdf');});
   if(!files.length){showToast('PDF files drop karein','error');return;}
@@ -1767,7 +1809,7 @@ async function setSingleFile(tool,file){
     setThumbInItem(thumbId,file);
   }
   // enable buttons
-  var btnIds={'split-size':'sizeSplitBtn','split-pages':'pagesSplitBtn','split-single':'singleSplitBtn','compress':'compressBtn','pdf-to-jpg':'pdfToJpgBtn','rotate-pdf':'rotateBtn','add-page-numbers':'pnBtn','add-watermark':'wmBtn','crop-pdf':'cropBtn','edit-pdf':'metaBtn','unlock-pdf':'unlockBtn','protect-pdf':'protectBtn','sign-pdf':'signBtn','redact-pdf':'redactBtn','ai-summarizer':'aiBtn','translate-pdf':'transBtn','pdf-to-pdfa':'pdfaBtn'};
+  var btnIds={'split-size':'sizeSplitBtn','split-pages':'pagesSplitBtn','split-single':'singleSplitBtn','compress':'compressBtn','pdf-to-jpg':'pdfToJpgBtn','rotate-pdf':'rotateBtn','add-page-numbers':'pnBtn','add-watermark':'wmBtn','crop-pdf':'cropBtn','edit-pdf':'metaBtn','unlock-pdf':'unlockBtn','protect-pdf':'protectBtn','sign-pdf':'signBtn','redact-pdf':'redactBtn','ai-summarizer':'aiBtn','translate-pdf':'transBtn','pdf-to-pdfa':'pdfaBtn','pdf-to-word':'pdfToWordBtn','pdf-to-ppt':'pdfToPptBtn','pdf-to-excel':'pdfToExcelBtn'};
   if(btnIds[tool]){var bb=document.getElementById(btnIds[tool]);if(bb)bb.disabled=false;}
   // show options panels
   var optMap={'split-size':'sizeOptions','compress':'compressOptions','split-client':'clientOptions','pdf-to-jpg':'pdfToJpgOptions','rotate-pdf':'rotateOptions','add-page-numbers':'pnOptions','add-watermark':'wmOptions','crop-pdf':'cropOptions','edit-pdf':'metaOptions','unlock-pdf':'unlockOptions','protect-pdf':'protectOptions','sign-pdf':'signOptions','redact-pdf':'redactOptions','ai-summarizer':'aiOptions','translate-pdf':'transOptions'};
@@ -1777,13 +1819,13 @@ async function setSingleFile(tool,file){
   if(tool==='sign-pdf')initSignCanvas();
   // load metadata for edit-pdf
   if(tool==='edit-pdf'){try{var buf=await file.arrayBuffer();var pdoc=await PDFLib.PDFDocument.load(buf,{ignoreEncryption:true});document.getElementById('metaTitle').value=pdoc.getTitle()||'';document.getElementById('metaAuthor').value=pdoc.getAuthor()||'';document.getElementById('metaSubject').value=pdoc.getSubject()||'';document.getElementById('metaKeywords').value=pdoc.getKeywords()||'';}catch(e){}}
-  var resultIds={'split-size':'size','split-pages':'pages','split-single':'single','compress':'compress','pdf-to-jpg':'pdf-to-jpg','rotate-pdf':'rotate-pdf','add-page-numbers':'add-page-numbers','add-watermark':'add-watermark','crop-pdf':'crop-pdf','edit-pdf':'edit-pdf','unlock-pdf':'unlock-pdf','protect-pdf':'protect-pdf','sign-pdf':'sign-pdf','redact-pdf':'redact-pdf','ai-summarizer':'ai-summarizer','translate-pdf':'translate-pdf','pdf-to-pdfa':'pdf-to-pdfa'};
+  var resultIds={'split-size':'size','split-pages':'pages','split-single':'single','compress':'compress','pdf-to-jpg':'pdf-to-jpg','rotate-pdf':'rotate-pdf','add-page-numbers':'add-page-numbers','add-watermark':'add-watermark','crop-pdf':'crop-pdf','edit-pdf':'edit-pdf','unlock-pdf':'unlock-pdf','protect-pdf':'protect-pdf','sign-pdf':'sign-pdf','redact-pdf':'redact-pdf','ai-summarizer':'ai-summarizer','translate-pdf':'translate-pdf','pdf-to-pdfa':'pdf-to-pdfa','pdf-to-word':'pdf-to-word','pdf-to-ppt':'pdf-to-ppt','pdf-to-excel':'pdf-to-excel'};
   if(resultIds[tool])hideResult(resultIds[tool]);
 }
 function clearSingleTool(tool){
   singleFiles[tool]=null;
   var listId=tool+'FileList';var le=document.getElementById(listId);if(le)le.innerHTML='';
-  var btnIds={'split-size':'sizeSplitBtn','split-pages':'pagesSplitBtn','split-single':'singleSplitBtn','compress':'compressBtn','pdf-to-jpg':'pdfToJpgBtn','rotate-pdf':'rotateBtn','add-page-numbers':'pnBtn','add-watermark':'wmBtn','crop-pdf':'cropBtn','edit-pdf':'metaBtn','unlock-pdf':'unlockBtn','protect-pdf':'protectBtn','sign-pdf':'signBtn','redact-pdf':'redactBtn','ai-summarizer':'aiBtn','translate-pdf':'transBtn','pdf-to-pdfa':'pdfaBtn'};
+  var btnIds={'split-size':'sizeSplitBtn','split-pages':'pagesSplitBtn','split-single':'singleSplitBtn','compress':'compressBtn','pdf-to-jpg':'pdfToJpgBtn','rotate-pdf':'rotateBtn','add-page-numbers':'pnBtn','add-watermark':'wmBtn','crop-pdf':'cropBtn','edit-pdf':'metaBtn','unlock-pdf':'unlockBtn','protect-pdf':'protectBtn','sign-pdf':'signBtn','redact-pdf':'redactBtn','ai-summarizer':'aiBtn','translate-pdf':'transBtn','pdf-to-pdfa':'pdfaBtn','pdf-to-word':'pdfToWordBtn','pdf-to-ppt':'pdfToPptBtn','pdf-to-excel':'pdfToExcelBtn'};
   if(btnIds[tool]){var bb=document.getElementById(btnIds[tool]);if(bb)bb.disabled=true;}
   var optMap={'split-size':'sizeOptions','compress':'compressOptions','split-client':'clientOptions','pdf-to-jpg':'pdfToJpgOptions','rotate-pdf':'rotateOptions','add-page-numbers':'pnOptions','add-watermark':'wmOptions','crop-pdf':'cropOptions','edit-pdf':'metaOptions','unlock-pdf':'unlockOptions','protect-pdf':'protectOptions','sign-pdf':'signOptions','redact-pdf':'redactOptions','ai-summarizer':'aiOptions','translate-pdf':'transOptions'};
   if(optMap[tool]){var op=document.getElementById(optMap[tool]);if(op)op.style.display='none';}
@@ -2365,13 +2407,13 @@ async function convertWordToPDF() {
   var btn = document.getElementById('wordConvertBtn');
   if (btn) { btn.disabled = true; btn.textContent = 'Converting...'; }
 
-  showProg('word-to-pdf', 30, 'Uploading file...');
+  showProg('word-to-pdf', 'Uploading file...', 30);
 
   var formData = new FormData();
   formData.append('file', _wordFile);
 
   try {
-    showProg('word-to-pdf', 60, 'LibreOffice se convert ho raha hai...');
+    showProg('word-to-pdf', 'LibreOffice se convert ho raha hai...', 60);
 
     var response = await fetch('https://pdf-pro-server.onrender.com/convert/word-to-pdf', {
       method: 'POST',
@@ -2383,12 +2425,12 @@ async function convertWordToPDF() {
       throw new Error('Server error: ' + errText);
     }
 
-    showProg('word-to-pdf', 90, 'PDF ready ho raha hai...');
+    showProg('word-to-pdf', 'PDF ready ho raha hai...', 90);
 
     var blob = await response.blob();
     var outName = _wordFile.name.replace(/\.docx?$/i, '') + '.pdf';
 
-    showProg('word-to-pdf', 100, 'Done!');
+    showProg('word-to-pdf', 'Done!', 100);
     showResult('word-to-pdf',
       _wordFile.name + ' successfully converted!',
       [blob],
@@ -2447,7 +2489,7 @@ async function convertExcelToPDF(){
   try{
     showProg('excel-to-pdf','LibreOffice se convert ho raha hai...',60);
     var response=await fetch('https://pdf-pro-server.onrender.com/convert/excel-to-pdf',{method:'POST',body:formData});
-    if(!response.ok){var err=await response.text();throw new Error('Server error: '+err);}
+    if(!response.ok){var err2=await response.text();throw new Error('Server error: '+err2);}
     showProg('excel-to-pdf','PDF ready...',90);
     var blob=await response.blob();
     var outName=_excelFile.name.replace(/\.(xlsx?|csv)$/i,'')+'.pdf';
@@ -2512,72 +2554,373 @@ async function convertPptToPDF(){
 }
 
 // =====================================================================
-// SCANNER FUNCTIONS
+// SCANNER FUNCTIONS — Fixed Camera + Crop/Edit + Effects
 // =====================================================================
+
+// ---- Camera ----
 async function startCamera(){
-  var wrap=document.getElementById('cameraWrap');var ph=document.getElementById('camPlaceholder');
+  var placeholder=document.getElementById('scannerPlaceholder');
+  var liveWrap=document.getElementById('scannerLiveWrap');
   try{
-    var constraints={video:{facingMode:cameraFacing,width:{ideal:1280},height:{ideal:960}}};
+    // Stop existing stream
+    if(cameraStream){cameraStream.getTracks().forEach(function(t){t.stop();});}
+
+    var constraints={
+      video:{
+        facingMode:{ideal:cameraFacing},
+        width:{ideal:1280},
+        height:{ideal:960}
+      }
+    };
     cameraStream=await navigator.mediaDevices.getUserMedia(constraints);
-    var video=document.getElementById('cameraVideo');video.srcObject=cameraStream;
-    if(ph)ph.style.display='none';if(wrap)wrap.style.display='block';
+    var video=document.getElementById('cameraVideo');
+    video.srcObject=cameraStream;
+    await video.play();
+
+    if(placeholder)placeholder.style.display='none';
+    if(liveWrap)liveWrap.style.display='block';
+
+    // Show scanned section if pages exist
+    if(scannerPages.length){
+      var sp=document.getElementById('scannedPagesSection');
+      if(sp)sp.style.display='block';
+    }
     showToast('Camera started ✅','success');
-  }catch(e){showToast('Camera access failed: '+e.message,'error');}
+  }catch(e){
+    showToast('Camera access failed: '+e.message+' — Browser permission check karein','error');
+    console.error('Camera error:',e);
+  }
 }
+
 function stopCamera(){
-  if(cameraStream){cameraStream.getTracks().forEach(function(t){t.stop();});cameraStream=null;}
-  var wrap=document.getElementById('cameraWrap');var ph=document.getElementById('camPlaceholder');
-  if(wrap)wrap.style.display='none';if(ph)ph.style.display='flex';
+  if(cameraStream){
+    cameraStream.getTracks().forEach(function(t){t.stop();});
+    cameraStream=null;
+  }
+  var video=document.getElementById('cameraVideo');
+  if(video)video.srcObject=null;
+  var liveWrap=document.getElementById('scannerLiveWrap');
+  var placeholder=document.getElementById('scannerPlaceholder');
+  if(liveWrap)liveWrap.style.display='none';
+  if(placeholder)placeholder.style.display='flex';
 }
+
 function switchCamera(){
   cameraFacing=cameraFacing==='environment'?'user':'environment';
-  if(cameraStream){stopCamera();startCamera();}
+  startCamera();
 }
+
 function captureFrame(){
-  var video=document.getElementById('cameraVideo');if(!video||!cameraStream){showToast('Camera pehle start karein','error');return;}
-  var canvas=document.createElement('canvas');canvas.width=video.videoWidth;canvas.height=video.videoHeight;
-  canvas.getContext('2d').drawImage(video,0,0);
+  var video=document.getElementById('cameraVideo');
+  if(!video||!cameraStream){showToast('Camera pehle start karein','error');return;}
+  if(video.videoWidth===0){showToast('Camera load ho raha hai, thoda wait karein','error');return;}
+
+  var canvas=document.createElement('canvas');
+  canvas.width=video.videoWidth;
+  canvas.height=video.videoHeight;
+  var ctx=canvas.getContext('2d');
+  ctx.drawImage(video,0,0);
+
+  // Flash effect
+  var flash=document.getElementById('captureFlash');
+  if(flash){flash.style.opacity='1';setTimeout(function(){flash.style.opacity='0';},150);}
+
   var dataUrl=canvas.toDataURL('image/jpeg',0.92);
-  scannerPages.push(dataUrl);renderScannerGrid();showToast('Page captured! ('+(scannerPages.length)+' total)','success');
+  scannerPages.push({original:dataUrl,edited:dataUrl,rotation:0});
+  renderScannerGrid();
+
+  var sp=document.getElementById('scannedPagesSection');
+  if(sp)sp.style.display='block';
+
+  showToast('Page captured! ('+(scannerPages.length)+' total)','success');
 }
+
 function addImagesFromGallery(e){
   var files=Array.from(e.target.files);if(!files.length)return;
+  var loaded=0;
   files.forEach(function(f){
     var reader=new FileReader();
-    reader.onload=function(ev){scannerPages.push(ev.target.result);renderScannerGrid();};
+    reader.onload=function(ev){
+      scannerPages.push({original:ev.target.result,edited:ev.target.result,rotation:0});
+      loaded++;
+      if(loaded===files.length){
+        renderScannerGrid();
+        var sp=document.getElementById('scannedPagesSection');
+        if(sp)sp.style.display='block';
+        showToast(files.length+' image(s) added ✅','success');
+      }
+    };
     reader.readAsDataURL(f);
   });
-  e.target.value='';showToast(files.length+' image(s) added ✅','success');
+  e.target.value='';
 }
-function setEnhance(mode,btn){
+
+// ---- Effects ----
+function setEnhance(mode,btnEl){
   scannerEnhMode=mode;
   document.querySelectorAll('.enhance-btn').forEach(function(b){b.classList.remove('active');});
-  if(btn)btn.classList.add('active');
+  if(btnEl)btnEl.classList.add('active');
+  // Re-apply to all pages preview
+  renderScannerGrid();
 }
+
+async function applyEffectToDataUrl(dataUrl,mode){
+  if(mode==='none')return dataUrl;
+  return new Promise(function(resolve){
+    var img=new Image();
+    img.onload=function(){
+      var canvas=document.createElement('canvas');
+      canvas.width=img.width;canvas.height=img.height;
+      var ctx=canvas.getContext('2d');
+      ctx.drawImage(img,0,0);
+      var imgData=ctx.getImageData(0,0,canvas.width,canvas.height);
+      var d=imgData.data;
+      for(var i=0;i<d.length;i+=4){
+        if(mode==='gray'||mode==='bw'){
+          var g=Math.round(0.299*d[i]+0.587*d[i+1]+0.114*d[i+2]);
+          if(mode==='bw')g=g>128?255:0;
+          d[i]=d[i+1]=d[i+2]=g;
+        } else if(mode==='lighten'){
+          d[i]=Math.min(255,d[i]+40);
+          d[i+1]=Math.min(255,d[i+1]+40);
+          d[i+2]=Math.min(255,d[i+2]+40);
+        } else if(mode==='morelight'){
+          d[i]=Math.min(255,d[i]+80);
+          d[i+1]=Math.min(255,d[i+1]+80);
+          d[i+2]=Math.min(255,d[i+2]+80);
+        } else if(mode==='contrast'){
+          d[i]=Math.min(255,Math.max(0,(d[i]-128)*1.6+128));
+          d[i+1]=Math.min(255,Math.max(0,(d[i+1]-128)*1.6+128));
+          d[i+2]=Math.min(255,Math.max(0,(d[i+2]-128)*1.6+128));
+        } else if(mode==='sharp'){
+          d[i]=Math.min(255,d[i]*1.15);
+          d[i+1]=Math.min(255,d[i+1]*1.15);
+          d[i+2]=Math.min(255,d[i+2]*1.15);
+        }
+      }
+      ctx.putImageData(imgData,0,0);
+      resolve(canvas.toDataURL('image/jpeg',0.92));
+    };
+    img.src=dataUrl;
+  });
+}
+
+// ---- Render Grid ----
 function renderScannerGrid(){
   var grid=document.getElementById('scannedGrid');if(!grid)return;
   var countEl=document.getElementById('scannedCount');if(countEl)countEl.textContent=scannerPages.length;
-  var buildBtn=document.getElementById('buildPdfBtn');if(buildBtn)buildBtn.disabled=!scannerPages.length;
   if(!scannerPages.length){grid.innerHTML='';return;}
-  grid.innerHTML=scannerPages.map(function(src,i){
+  grid.innerHTML=scannerPages.map(function(pg,i){
     return '<div class="scanned-card" draggable="true" id="sc-'+i+'" ondragstart="scanDStart(event,'+i+')" ondragover="scanDOver(event,'+i+')" ondrop="scanDDrop(event,'+i+')" ondragend="scanDEnd()">'+
-      '<img src="'+src+'"><div class="scanned-card-footer"><span class="scanned-card-num">#'+(i+1)+'</span>'+
-      '<button class="scanned-card-del" onclick="deleteScannedPage('+i+')">✕</button></div></div>';
+      '<img src="'+pg.edited+'" style="width:100%;aspect-ratio:3/4;object-fit:cover;display:block;">'+
+      '<div class="scanned-card-footer">'+
+        '<span class="scanned-card-num">#'+(i+1)+'</span>'+
+        '<div style="display:flex;gap:4px;">'+
+          '<button style="background:none;border:1px solid var(--border);border-radius:4px;padding:2px 6px;font-size:10px;cursor:pointer;" onclick="openCropModal('+i+')">✂️</button>'+
+          '<button class="scanned-card-del" onclick="deleteScannedPage('+i+')">✕</button>'+
+        '</div>'+
+      '</div>'+
+    '</div>';
   }).join('');
 }
-function deleteScannedPage(i){scannerPages.splice(i,1);renderScannerGrid();}
-function clearAllScanned(){scannerPages=[];renderScannerGrid();}
+
+function deleteScannedPage(i){
+  scannerPages.splice(i,1);
+  renderScannerGrid();
+  if(!scannerPages.length){
+    var sp=document.getElementById('scannedPagesSection');
+    if(sp)sp.style.display='none';
+  }
+}
+
+function clearAllScanned(){
+  scannerPages=[];
+  renderScannerGrid();
+  var sp=document.getElementById('scannedPagesSection');
+  if(sp)sp.style.display='none';
+  var sr=document.getElementById('scannerResult');
+  if(sr)sr.classList.remove('visible');
+}
+
+// ---- Drag & Drop ----
 function scanDStart(e,i){_scanDragIdx=i;setTimeout(function(){var el=document.getElementById('sc-'+i);if(el)el.classList.add('dragging-scan');},0);}
 function scanDOver(e,i){e.preventDefault();document.querySelectorAll('.scanned-card').forEach(function(c){c.classList.remove('drag-over-scan');});var el=document.getElementById('sc-'+i);if(el)el.classList.add('drag-over-scan');}
-function scanDDrop(e,i){e.preventDefault();if(_scanDragIdx===null||_scanDragIdx===i)return;var moved=scannerPages.splice(_scanDragIdx,1)[0];scannerPages.splice(i,0,moved);renderScannerGrid();}
-function scanDEnd(){_scanDragIdx=null;document.querySelectorAll('.scanned-card').forEach(function(c){c.classList.remove('dragging-scan','drag-over-scan');});}
-async function applyEnhancement(canvas,mode){
-  var ctx=canvas.getContext('2d');var imgData=ctx.getImageData(0,0,canvas.width,canvas.height);var d=imgData.data;
-  if(mode==='bw'){for(var i=0;i<d.length;i+=4){var g=Math.round(0.299*d[i]+0.587*d[i+1]+0.114*d[i+2]);d[i]=d[i+1]=d[i+2]=g;}}
-  else if(mode==='contrast'){for(var i=0;i<d.length;i+=4){d[i]=Math.min(255,Math.max(0,(d[i]-128)*1.4+128));d[i+1]=Math.min(255,Math.max(0,(d[i+1]-128)*1.4+128));d[i+2]=Math.min(255,Math.max(0,(d[i+2]-128)*1.4+128));}}
-  else if(mode==='sharpen'){/* simple brightness boost */for(var i=0;i<d.length;i+=4){d[i]=Math.min(255,d[i]*1.1);d[i+1]=Math.min(255,d[i+1]*1.1);d[i+2]=Math.min(255,d[i+2]*1.1);}}
-  ctx.putImageData(imgData,0,0);
+function scanDDrop(e,i){
+  e.preventDefault();
+  if(_scanDragIdx===null||_scanDragIdx===i)return;
+  var moved=scannerPages.splice(_scanDragIdx,1)[0];
+  scannerPages.splice(i,0,moved);
+  renderScannerGrid();
 }
+function scanDEnd(){_scanDragIdx=null;document.querySelectorAll('.scanned-card').forEach(function(c){c.classList.remove('dragging-scan','drag-over-scan');});}
+
+// ---- Crop/Edit Modal ----
+var _cropPageIdx = -1;
+var _cropRotation = 0;
+var _cropStart = null;
+var _cropRect = null;
+var _cropImg = null;
+var _cropCtx = null;
+var _cropCanvas = null;
+var _isDragging = false;
+
+function openCropModal(idx){
+  _cropPageIdx=idx;
+  _cropRotation=scannerPages[idx].rotation||0;
+  _cropStart=null;
+  _cropRect=null;
+
+  var modal=document.getElementById('cropModal');
+  modal.style.display='flex';
+
+  _cropCanvas=document.getElementById('cropCanvas');
+  _cropCtx=_cropCanvas.getContext('2d');
+
+  _cropImg=new Image();
+  _cropImg.onload=function(){
+    drawCropCanvas();
+  };
+  _cropImg.src=scannerPages[idx].original;
+
+  // Mouse events
+  _cropCanvas.onmousedown=function(e){
+    var rect=_cropCanvas.getBoundingClientRect();
+    var scaleX=_cropCanvas.width/rect.width;
+    var scaleY=_cropCanvas.height/rect.height;
+    _cropStart={x:(e.clientX-rect.left)*scaleX,y:(e.clientY-rect.top)*scaleY};
+    _isDragging=true;
+  };
+  _cropCanvas.onmousemove=function(e){
+    if(!_isDragging||!_cropStart)return;
+    var rect=_cropCanvas.getBoundingClientRect();
+    var scaleX=_cropCanvas.width/rect.width;
+    var scaleY=_cropCanvas.height/rect.height;
+    var cur={x:(e.clientX-rect.left)*scaleX,y:(e.clientY-rect.top)*scaleY};
+    _cropRect={x:Math.min(_cropStart.x,cur.x),y:Math.min(_cropStart.y,cur.y),w:Math.abs(cur.x-_cropStart.x),h:Math.abs(cur.y-_cropStart.y)};
+    drawCropCanvas();
+  };
+  _cropCanvas.onmouseup=function(){_isDragging=false;};
+
+  // Touch events
+  _cropCanvas.ontouchstart=function(e){
+    e.preventDefault();
+    var rect=_cropCanvas.getBoundingClientRect();
+    var scaleX=_cropCanvas.width/rect.width;
+    var scaleY=_cropCanvas.height/rect.height;
+    var t=e.touches[0];
+    _cropStart={x:(t.clientX-rect.left)*scaleX,y:(t.clientY-rect.top)*scaleY};
+    _isDragging=true;
+  };
+  _cropCanvas.ontouchmove=function(e){
+    e.preventDefault();
+    if(!_isDragging||!_cropStart)return;
+    var rect=_cropCanvas.getBoundingClientRect();
+    var scaleX=_cropCanvas.width/rect.width;
+    var scaleY=_cropCanvas.height/rect.height;
+    var t=e.touches[0];
+    var cur={x:(t.clientX-rect.left)*scaleX,y:(t.clientY-rect.top)*scaleY};
+    _cropRect={x:Math.min(_cropStart.x,cur.x),y:Math.min(_cropStart.y,cur.y),w:Math.abs(cur.x-_cropStart.x),h:Math.abs(cur.y-_cropStart.y)};
+    drawCropCanvas();
+  };
+  _cropCanvas.ontouchend=function(){_isDragging=false;};
+}
+
+function drawCropCanvas(){
+  if(!_cropImg||!_cropCtx)return;
+
+  // Set canvas size based on rotation
+  var w=_cropImg.naturalWidth;
+  var h=_cropImg.naturalHeight;
+  var isRotated=_cropRotation===90||_cropRotation===270;
+  _cropCanvas.width=isRotated?h:w;
+  _cropCanvas.height=isRotated?w:h;
+
+  // Draw rotated image
+  _cropCtx.save();
+  _cropCtx.translate(_cropCanvas.width/2,_cropCanvas.height/2);
+  _cropCtx.rotate(_cropRotation*Math.PI/180);
+  _cropCtx.drawImage(_cropImg,-w/2,-h/2);
+  _cropCtx.restore();
+
+  // Draw crop rect overlay
+  if(_cropRect&&_cropRect.w>5&&_cropRect.h>5){
+    _cropCtx.fillStyle='rgba(0,0,0,0.45)';
+    _cropCtx.fillRect(0,0,_cropCanvas.width,_cropRect.y);
+    _cropCtx.fillRect(0,_cropRect.y+_cropRect.h,_cropCanvas.width,_cropCanvas.height-_cropRect.y-_cropRect.h);
+    _cropCtx.fillRect(0,_cropRect.y,_cropRect.x,_cropRect.h);
+    _cropCtx.fillRect(_cropRect.x+_cropRect.w,_cropRect.y,_cropCanvas.width-_cropRect.x-_cropRect.w,_cropRect.h);
+    _cropCtx.strokeStyle='#2563eb';
+    _cropCtx.lineWidth=2;
+    _cropCtx.strokeRect(_cropRect.x,_cropRect.y,_cropRect.w,_cropRect.h);
+  }
+}
+
+function rotateCropCanvas(){
+  _cropRotation=(_cropRotation+90)%360;
+  drawCropCanvas();
+}
+
+function resetCrop(){
+  _cropRect=null;
+  _cropRotation=0;
+  drawCropCanvas();
+}
+
+function applyCrop(){
+  if(_cropPageIdx<0)return;
+  // Create result canvas
+  var resultCanvas=document.createElement('canvas');
+  var resultCtx=resultCanvas.getContext('2d');
+  var w=_cropImg.naturalWidth;
+  var h=_cropImg.naturalHeight;
+  var isRotated=_cropRotation===90||_cropRotation===270;
+  var cw=isRotated?h:w;
+  var ch=isRotated?w:h;
+
+  // Draw rotated
+  var tempCanvas=document.createElement('canvas');
+  tempCanvas.width=cw;tempCanvas.height=ch;
+  var tempCtx=tempCanvas.getContext('2d');
+  tempCtx.save();
+  tempCtx.translate(cw/2,ch/2);
+  tempCtx.rotate(_cropRotation*Math.PI/180);
+  tempCtx.drawImage(_cropImg,-w/2,-h/2);
+  tempCtx.restore();
+
+  // Apply crop if selected
+  if(_cropRect&&_cropRect.w>10&&_cropRect.h>10){
+    // Scale crop rect back to full resolution
+    var scaleX=cw/_cropCanvas.width;
+    var scaleY=ch/_cropCanvas.height;
+    resultCanvas.width=Math.round(_cropRect.w*scaleX);
+    resultCanvas.height=Math.round(_cropRect.h*scaleY);
+    resultCtx.drawImage(tempCanvas,
+      Math.round(_cropRect.x*scaleX),Math.round(_cropRect.y*scaleY),
+      resultCanvas.width,resultCanvas.height,
+      0,0,resultCanvas.width,resultCanvas.height
+    );
+  } else {
+    resultCanvas.width=cw;resultCanvas.height=ch;
+    resultCtx.drawImage(tempCanvas,0,0);
+  }
+
+  var editedUrl=resultCanvas.toDataURL('image/jpeg',0.92);
+  scannerPages[_cropPageIdx].edited=editedUrl;
+  scannerPages[_cropPageIdx].rotation=_cropRotation;
+
+  closeCropModal();
+  renderScannerGrid();
+  showToast('Page edited! ✅','success');
+}
+
+function closeCropModal(){
+  var modal=document.getElementById('cropModal');
+  if(modal)modal.style.display='none';
+  _cropPageIdx=-1;
+  _cropRect=null;
+}
+
+// ---- Build PDF ----
 async function buildScannerPDF(){
   if(!scannerPages.length){showToast('Koi page nahi hai','error');return;}
   var btn=document.getElementById('buildPdfBtn');if(btn){btn.disabled=true;btn.textContent='Building...';}
@@ -2587,33 +2930,44 @@ async function buildScannerPDF(){
     for(var i=0;i<scannerPages.length;i++){
       var spEl=document.getElementById('scannerProgressStatus');if(spEl)spEl.textContent='Processing page '+(i+1)+'/'+scannerPages.length+'...';
       var fill=document.getElementById('scannerProgressFill');if(fill)fill.style.width=Math.round((i+1)/scannerPages.length*90)+'%';
-      var src=scannerPages[i];var canvas=document.createElement('canvas');var img=new Image();
-      await new Promise(function(res){img.onload=res;img.src=src;});
-      canvas.width=img.width;canvas.height=img.height;
-      var ctx2=canvas.getContext('2d');ctx2.drawImage(img,0,0);
-      if(scannerEnhMode!=='none')await applyEnhancement(canvas,scannerEnhMode);
-      var jpegData=canvas.toDataURL('image/jpeg',0.88);var b64=jpegData.split(',')[1];
-      var binary=atob(b64);var bytes=new Uint8Array(binary.length);for(var j=0;j<binary.length;j++)bytes[j]=binary.charCodeAt(j);
+
+      // Apply effect to edited image
+      var finalUrl=await applyEffectToDataUrl(scannerPages[i].edited,scannerEnhMode);
+
+      var canvas2=document.createElement('canvas');
+      var img2=new Image();
+      await new Promise(function(res){img2.onload=res;img2.src=finalUrl;});
+      canvas2.width=img2.width;canvas2.height=img2.height;
+      var ctx2=canvas2.getContext('2d');ctx2.drawImage(img2,0,0);
+
+      var jpegData=canvas2.toDataURL('image/jpeg',0.88);
+      var b64=jpegData.split(',')[1];
+      var binary=atob(b64);var bytes=new Uint8Array(binary.length);
+      for(var j=0;j<binary.length;j++)bytes[j]=binary.charCodeAt(j);
+
       var embImg=await pdfDoc.embedJpg(bytes);
       var page=pdfDoc.addPage([embImg.width,embImg.height]);
       page.drawImage(embImg,{x:0,y:0,width:embImg.width,height:embImg.height});
     }
     var fill2=document.getElementById('scannerProgressFill');if(fill2)fill2.style.width='100%';
     var spEl2=document.getElementById('scannerProgressStatus');if(spEl2)spEl2.textContent='Saving...';
-    var bytes2=await pdfDoc.save();var blob=new Blob([bytes2],{type:'application/pdf'});
+    var bytes2=await pdfDoc.save();
+    var blob=new Blob([bytes2],{type:'application/pdf'});
     var ri=document.getElementById('scannerResultInfo');if(ri)ri.textContent=scannerPages.length+' pages — '+(bytes2.length/1024/1024).toFixed(2)+' MB';
     resultStore['scanner']={blobs:[blob],names:['Scanned_Document.pdf']};
     var db=document.getElementById('scannerDownloadBtns');if(db)db.innerHTML='<button class="btn-download" onclick="dlBlob(\'scanner\',0)">⬇ Scanned_Document.pdf</button>';
     var sr=document.getElementById('scannerResult');if(sr)sr.classList.add('visible');
     showToast('PDF ready! ✅','success');
   }catch(e){showToast('Failed: '+e.message,'error');console.error(e);}
-  if(sp)sp.classList.remove('visible');if(btn){btn.disabled=false;btn.textContent='📄 Build PDF';}
+  if(sp)sp.classList.remove('visible');
+  if(btn){btn.disabled=false;btn.textContent='📄 Build PDF';}
 }
+
 function sendScannerToMerge(){
   var data=resultStore['scanner'];if(!data||!data.blobs.length){showToast('Pehle PDF banao','error');return;}
   var blob=data.blobs[0];var file=new File([blob],'Scanned_Document.pdf',{type:'application/pdf'});
   switchCat('merge',null);openTool('merge',null);
-  setTimeout(function(){addMergeItem(file);showToast('Scanner PDF merge mein add hua! ✅','success');},200);
+  setTimeout(function(){addMergeItem({type:'file',file:file,name:file.name,size:file.size});showToast('Scanner PDF merge mein add hua! ✅','success');},200);
 }
 
 // =====================================================================
@@ -2652,6 +3006,84 @@ async function generateClientPDFs(){
   }catch(e){showToast('Failed: '+e.message,'error');console.error(e);}
   if(cgp)setTimeout(function(){cgp.classList.remove('visible');},1000);
   if(genBtn){genBtn.disabled=false;genBtn.textContent='📥 Generate PDFs';}
+}
+
+// =====================================================================
+// PDF TO WORD (LibreOffice server)
+// =====================================================================
+async function convertPDFtoWord(){
+  var file=singleFiles['pdf-to-word'];if(!file){showToast('Pehle PDF file select karein','error');return;}
+  var btn=document.getElementById('pdfToWordBtn');if(btn){btn.disabled=true;btn.textContent='Converting...';}
+  showProg('pdf-to-word','Uploading file...',30);
+  var formData=new FormData();formData.append('file',file);
+  try{
+    showProg('pdf-to-word','LibreOffice se convert ho raha hai...',60);
+    var response=await fetch('https://pdf-pro-server.onrender.com/convert/pdf-to-word',{method:'POST',body:formData});
+    if(!response.ok){var errT=await response.text();throw new Error('Server error: '+errT);}
+    showProg('pdf-to-word','Word file ready ho rahi hai...',90);
+    var blob=await response.blob();
+    var outName=file.name.replace(/\.pdf$/i,'')+'.docx';
+    showProg('pdf-to-word','Done!',100);
+    showResult('pdf-to-word',file.name+' successfully converted!',[blob],[outName]);
+    showToast('Word file ready! ✅','success');
+  }catch(err){
+    hideProg('pdf-to-word');
+    showToast('Conversion failed: '+err.message,'error');
+    console.error(err);
+  }
+  if(btn){btn.disabled=false;btn.textContent='📝 Convert to Word';}
+}
+
+// =====================================================================
+// PDF TO PPT (LibreOffice server)
+// =====================================================================
+async function convertPDFtoPPT(){
+  var file=singleFiles['pdf-to-ppt'];if(!file){showToast('Pehle PDF file select karein','error');return;}
+  var btn=document.getElementById('pdfToPptBtn');if(btn){btn.disabled=true;btn.textContent='Converting...';}
+  showProg('pdf-to-ppt','Uploading file...',30);
+  var formData=new FormData();formData.append('file',file);
+  try{
+    showProg('pdf-to-ppt','LibreOffice se convert ho raha hai...',60);
+    var response=await fetch('https://pdf-pro-server.onrender.com/convert/pdf-to-ppt',{method:'POST',body:formData});
+    if(!response.ok){var errT=await response.text();throw new Error('Server error: '+errT);}
+    showProg('pdf-to-ppt','PowerPoint ready ho raha hai...',90);
+    var blob=await response.blob();
+    var outName=file.name.replace(/\.pdf$/i,'')+'.pptx';
+    showProg('pdf-to-ppt','Done!',100);
+    showResult('pdf-to-ppt',file.name+' successfully converted!',[blob],[outName]);
+    showToast('PowerPoint ready! ✅','success');
+  }catch(err){
+    hideProg('pdf-to-ppt');
+    showToast('Conversion failed: '+err.message,'error');
+    console.error(err);
+  }
+  if(btn){btn.disabled=false;btn.textContent='📊 Convert to PPT';}
+}
+
+// =====================================================================
+// PDF TO EXCEL (LibreOffice server)
+// =====================================================================
+async function convertPDFtoExcel(){
+  var file=singleFiles['pdf-to-excel'];if(!file){showToast('Pehle PDF file select karein','error');return;}
+  var btn=document.getElementById('pdfToExcelBtn');if(btn){btn.disabled=true;btn.textContent='Converting...';}
+  showProg('pdf-to-excel','Uploading file...',30);
+  var formData=new FormData();formData.append('file',file);
+  try{
+    showProg('pdf-to-excel','LibreOffice se convert ho raha hai...',60);
+    var response=await fetch('https://pdf-pro-server.onrender.com/convert/pdf-to-excel',{method:'POST',body:formData});
+    if(!response.ok){var errT=await response.text();throw new Error('Server error: '+errT);}
+    showProg('pdf-to-excel','Excel file ready ho rahi hai...',90);
+    var blob=await response.blob();
+    var outName=file.name.replace(/\.pdf$/i,'')+'.xlsx';
+    showProg('pdf-to-excel','Done!',100);
+    showResult('pdf-to-excel',file.name+' successfully converted!',[blob],[outName]);
+    showToast('Excel file ready! ✅','success');
+  }catch(err){
+    hideProg('pdf-to-excel');
+    showToast('Conversion failed: '+err.message,'error');
+    console.error(err);
+  }
+  if(btn){btn.disabled=false;btn.textContent='📈 Convert to Excel';}
 }
 
 // Resolve any queued stub calls now that all functions are defined
