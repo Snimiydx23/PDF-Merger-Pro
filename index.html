@@ -3263,7 +3263,7 @@ function parseInvoice(rawText){
   var o={invoiceNo:'',invoiceDate:'',supplierName:'',supplierGstin:'',buyerGstin:'',taxable:'',cgst:'',sgst:'',igst:'',total:''};
 
   // GSTIN (15 char) — pehla supplier, doosra buyer
-  var gstRe=/\b(\d{2}[A-Z]{5}\d{4}[A-Z][A-Z\d]Z[A-Z\d])\b/g;
+  var gstRe=/(\d{2}[A-Z]{5}\d{4}[A-Z][A-Z\d]Z[A-Z\d])(?![A-Z0-9])/g;
   var gstins=[],gm;
   while((gm=gstRe.exec(text.toUpperCase()))!==null){if(gstins.indexOf(gm[1])===-1)gstins.push(gm[1]);}
   if(gstins[0])o.supplierGstin=gstins[0];
@@ -3318,13 +3318,25 @@ function parseInvoice(rawText){
     if(t>0)o.taxable=String(Math.round(t*100)/100);
   }
 
-  // Supplier name heuristic: first meaningful line (newline preserved)
+  // Supplier name — pehle company-keyword wali line, warna pehli clean line
   var lines=text.split(/\n|\r/).map(function(l){return l.trim();}).filter(function(l){return l.length>2;});
-  for(var li=0;li<lines.length&&li<6;li++){
+  var COMP=/\b(enterprises?|limited|ltd|pvt|llp|industr|traders?|trading|agenc(?:y|ies)|corp(?:oration)?|ventures?|udyog|steels?|carbon|associates?|sons|brothers|impex|exports?|imports?|marketing|distributors?|suppliers?|company|& co)\b/i;
+  var BAD=/bank|declaration|generated|jurisdiction|subject to|terms|condition|chargeable|computer/i;
+  var pick='';
+  for(var li=0;li<lines.length&&li<14;li++){
     var l=lines[li];
-    if(/gstin|invoice|tax\s*invoice|bill\s*no|^date|original|duplicate|^[0-9₹.,\-\/ %]+$/i.test(l))continue;
-    o.supplierName=l.replace(/\s{2,}/g,' ').substring(0,60);break;
+    if(/^(irn|ack)\b|e-?invoice|gstin|tax\s*invoice/i.test(l))continue;
+    if(COMP.test(l)&&!BAD.test(l)){pick=l;break;}
   }
+  if(!pick){
+    for(var lj=0;lj<lines.length&&lj<8;lj++){
+      var l2=lines[lj];
+      if(/^(irn|ack)\b|e-?invoice|gstin|invoice|tax\s*invoice|bill\s*no|^date\b|original|duplicate|^[0-9₹.,\-\/ %]+$/i.test(l2))continue;
+      if(/[0-9a-f]{22,}/i.test(l2.replace(/\s/g,'')))continue;
+      pick=l2;break;
+    }
+  }
+  o.supplierName=(pick||'').replace(/\s{2,}/g,' ').substring(0,60);
   return o;
 }
 
