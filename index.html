@@ -22,7 +22,9 @@ function _stub(fn){return function(){if(window['_real_'+fn])window['_real_'+fn].
  'switchCamera','captureFrame','addImagesFromGallery','setEnhance','clearAllScanned',
  'buildScannerPDF','sendScannerToMerge','deleteScannedPage','scanDStart','scanDOver',
  'scanDDrop','scanDEnd','dlBlob','dlZip','dStart','dOver','dLeave','dDrop','dEnd',
- 'removeMergeItem','renderMergeList'
+ 'removeMergeItem','renderMergeList',
+ 'handleInvDrop','addInvFiles','removeInvFile','clearInvoiceTool','scanInvoices',
+ 'addBlankInvoiceRow','delInvoiceRow','invEdit','exportInvoiceExcel'
 ].forEach(function(fn){window[fn]=_stub(fn);});
 </script>
 <meta charset="UTF-8">
@@ -83,6 +85,16 @@ header{background:var(--white);border-bottom:1px solid var(--border);padding:0 2
 .cat-tab[data-cat="intelligence"].active{background:#7c3aed;color:white;}
 .cat-tab[data-cat="merge"]{border-color:var(--red);color:var(--red);}
 .cat-tab[data-cat="merge"].active{background:var(--red);color:white;}
+.cat-tab[data-cat="invoice"]{border-color:#16a34a;color:#16a34a;}
+.cat-tab[data-cat="invoice"].active{background:#16a34a;color:white;}
+/* INVOICE EXTRACTOR */
+.inv-cell-input{width:100%;min-width:90px;border:1px solid var(--border);border-radius:5px;padding:4px 6px;font-size:11px;font-family:'DM Sans',sans-serif;background:var(--input-bg);color:var(--text);outline:none;}
+.inv-cell-input:focus{border-color:#16a34a;}
+.inv-num{text-align:right;}
+table.scan-tbl td.inv-del{text-align:center;}
+.inv-del-btn{background:none;border:1px solid var(--border);border-radius:5px;width:24px;height:24px;cursor:pointer;color:#ef4444;font-size:12px;}
+.inv-del-btn:hover{background:#ef4444;color:white;border-color:#ef4444;}
+.inv-file-thumb{font-size:18px;}
 
 /* TOOL GRID */
 .tool-section{display:none;}
@@ -358,6 +370,7 @@ table.scan-tbl tr:nth-child(even) td{background:var(--opt-bg);}
   <button class="cat-tab" data-cat="security" onclick="switchCat('security',this)">🔒 PDF Security</button>
   <button class="cat-tab" data-cat="intelligence" onclick="switchCat('intelligence',this)">🤖 PDF Intelligence</button>
   <button class="cat-tab" data-cat="scanner" onclick="switchCat('scanner',this)">📷 Scanner</button>
+  <button class="cat-tab" data-cat="invoice" onclick="switchCat('invoice',this)">🧾 Invoice → Excel</button>
 </div>
 
 <!-- ====== MERGE & SPLIT SECTION ====== -->
@@ -1497,6 +1510,78 @@ table.scan-tbl tr:nth-child(even) td{background:var(--opt-bg);}
           <div style="margin-top:8px;">
             <button class="btn-capture" style="margin:0 auto;display:inline-flex;" onclick="sendScannerToMerge()">🔗 Merge Tool Mein Bhejo</button>
           </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ====== INVOICE → EXCEL SECTION ====== -->
+<div class="tool-section" id="sec-invoice">
+  <div class="tool-grid">
+    <div class="tool-card active" data-color="green" onclick="openToolInSec('invoice-extract',this,'invoice')"><span class="icon">🧾</span><div class="label">Invoice → Excel</div><div class="desc">Scan + OCR → Excel</div></div>
+  </div>
+
+  <!-- INVOICE EXTRACTOR PANEL -->
+  <div class="tool-panel active" id="panel-invoice-extract">
+    <div class="panel-header green"><h2>🧾 Invoice Data Extractor → Excel</h2><p>PDF / JPG / PNG invoices upload karein → auto scan + OCR → data systematically extract → MS Excel download</p></div>
+    <div class="panel-body">
+      <div class="drop-zone" id="invDropZone" ondragover="handleDragOver(event,'invDropZone')" ondragleave="handleDragLeave(event,'invDropZone')" ondrop="handleInvDrop(event)">
+        <span class="dz-icon">📁</span><h3>Drop invoice files here</h3><p>PDF, JPG, PNG — ek ya multiple files (har page = ek invoice)</p>
+        <button class="btn-select green" onclick="document.getElementById('invFileInput').click()">📁 Select Invoices</button>
+        <input type="file" id="invFileInput" multiple accept=".pdf,.jpg,.jpeg,.png,.webp" onchange="addInvFiles(event)">
+      </div>
+      <div id="invFileList" class="file-list"></div>
+
+      <div id="invOptions" class="options-panel" style="display:none;">
+        <div class="options-title">🔍 Scan Settings</div>
+        <div class="info-box" style="border-color:#86efac;color:#16a34a;">💡 Text-based PDFs ka data seedha read hota hai. Scanned/image pages aur JPG/PNG par OCR (Tesseract) chalega.</div>
+        <label class="checkrow"><input type="checkbox" id="invCaseInsensitive" checked> Case-insensitive search</label>
+        <label class="checkrow"><input type="checkbox" id="invPartialMatch" checked> Partial match allowed</label>
+        <label class="checkrow"><input type="checkbox" id="invUseOCR" checked> OCR for scanned/image pages (Tesseract)</label>
+
+        <div style="margin-top:12px;">
+          <label style="font-size:12px;font-weight:600;color:var(--muted);">FILTER KEYWORDS (optional) — ek line = ek keyword. Sirf inse match hone wali invoices Excel mein jaayengi. Khaali chhodne par sabhi extract hongi.</label>
+          <textarea class="client-name-area" id="invFilterKeywords" placeholder="DHANUKA&#10;33ABCDE1234F1Z5&#10;TAX INVOICE" style="margin-top:6px;"></textarea>
+        </div>
+
+        <div class="action-row">
+          <button class="btn-clear" onclick="clearInvoiceTool()">🗑 Clear</button>
+          <button class="btn-main green" id="invScanBtn" onclick="scanInvoices()">🔍 Scan &amp; Extract</button>
+        </div>
+      </div>
+
+      <div class="progress-wrap" id="invScanProgress"><div class="progress-status" id="invScanProgressStatus">Scanning...</div><div class="progress-bar-bg"><div class="progress-bar-fill green" id="invScanProgressFill"></div></div></div>
+
+      <div id="invScanResult" style="display:none;margin-top:14px;">
+        <div id="invSummary" class="scan-summary"></div>
+        <div style="margin-top:10px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
+          <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;">📋 Extracted Data — edit karke fix kar sakte hain</div>
+          <div style="display:flex;gap:5px;flex-wrap:wrap;">
+            <button class="btn-sm grey" onclick="addBlankInvoiceRow()">➕ Blank Row</button>
+            <button class="btn-sm green" id="invExcelBtn" onclick="exportInvoiceExcel()">⬇ Download Excel</button>
+          </div>
+        </div>
+        <div class="scan-table-wrap">
+          <table class="scan-tbl">
+            <thead><tr>
+              <th style="width:34px;text-align:center;">#</th>
+              <th>Source File</th>
+              <th style="width:40px;">Pg</th>
+              <th style="width:120px;">Invoice No</th>
+              <th style="width:100px;">Invoice Date</th>
+              <th style="width:150px;">Supplier Name</th>
+              <th style="width:140px;">Supplier GSTIN</th>
+              <th style="width:140px;">Buyer GSTIN</th>
+              <th style="width:100px;">Taxable Value</th>
+              <th style="width:85px;">CGST</th>
+              <th style="width:85px;">SGST</th>
+              <th style="width:85px;">IGST</th>
+              <th style="width:105px;">Invoice Total</th>
+              <th style="width:40px;"></th>
+            </tr></thead>
+            <tbody id="invTableBody"></tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -3084,6 +3169,310 @@ async function convertPDFtoExcel(){
     console.error(err);
   }
   if(btn){btn.disabled=false;btn.textContent='📈 Convert to Excel';}
+}
+
+// =====================================================================
+// INVOICE → EXCEL EXTRACTOR
+// PDF/JPG/PNG upload -> per-page text (pdf.js) + OCR fallback (Tesseract)
+// -> regex-based field parse (Indian GST invoice) -> editable table -> XLSX
+// =====================================================================
+var invFiles=[];      // {file, name, type:'pdf'|'image', size}
+var invoiceRows=[];   // extracted/edited rows
+
+function _invIsImage(f){return /^image\//.test(f.type)||/\.(jpe?g|png|webp)$/i.test(f.name);}
+function _invIsPdf(f){return f.type==='application/pdf'||/\.pdf$/i.test(f.name);}
+
+function handleInvDrop(e){
+  e.preventDefault();var z=document.getElementById('invDropZone');if(z)z.classList.remove('dragover');
+  var files=Array.from(e.dataTransfer.files).filter(function(f){return _invIsPdf(f)||_invIsImage(f);});
+  if(!files.length){showToast('PDF / JPG / PNG files drop karein','error');return;}
+  _invAddFiles(files);
+}
+function addInvFiles(e){var files=Array.from(e.target.files||[]);_invAddFiles(files);e.target.value='';}
+function _invAddFiles(files){
+  files.forEach(function(f){
+    if(!_invIsPdf(f)&&!_invIsImage(f))return;
+    invFiles.push({file:f,name:f.name,type:_invIsPdf(f)?'pdf':'image',size:f.size});
+  });
+  renderInvFileList();
+  var op=document.getElementById('invOptions');if(op)op.style.display=invFiles.length?'block':'none';
+}
+function removeInvFile(i){invFiles.splice(i,1);renderInvFileList();if(!invFiles.length){var op=document.getElementById('invOptions');if(op)op.style.display='none';}}
+function renderInvFileList(){
+  var el=document.getElementById('invFileList');if(!el)return;
+  if(!invFiles.length){el.innerHTML='';return;}
+  el.innerHTML=invFiles.map(function(it,i){
+    var icon=it.type==='pdf'?'📄':'🖼️';
+    return '<div class="file-item"><span class="file-icon inv-file-thumb">'+icon+'</span><div class="file-info"><div class="file-name">'+escH(it.name)+'</div><div class="file-meta">'+(it.size/1024/1024).toFixed(2)+' MB · '+it.type.toUpperCase()+'</div></div><div class="file-actions"><button class="btn-icon" onclick="removeInvFile('+i+')">✕</button></div></div>';
+  }).join('');
+}
+function clearInvoiceTool(){
+  invFiles=[];invoiceRows=[];
+  var el=document.getElementById('invFileList');if(el)el.innerHTML='';
+  var op=document.getElementById('invOptions');if(op)op.style.display='none';
+  var rs=document.getElementById('invScanResult');if(rs)rs.style.display='none';
+  var inp=document.getElementById('invFileInput');if(inp)inp.value='';
+}
+function setInvProg(msg,pct){var s=document.getElementById('invScanProgressStatus');if(s)s.textContent=msg;var f=document.getElementById('invScanProgressFill');if(f)f.style.width=pct+'%';}
+function getInvFilterKeywords(){var el=document.getElementById('invFilterKeywords');return (el?el.value:'').split('\n').map(function(s){return s.trim();}).filter(function(s){return s.length>0;});}
+
+// ---------- regex parser for Indian GST invoices ----------
+function _invClean(t){return (t||'').replace(/\u00A0/g,' ').replace(/[ \t]+/g,' ').replace(/[ \t]*\n[ \t]*/g,'\n');}
+function _invNum(s){if(!s)return '';return s.replace(/[^0-9.]/g,'').replace(/\.(?=.*\.)/g,'');}
+function _invToFloat(s){var n=parseFloat(String(s).replace(/,/g,''));return isNaN(n)?0:n;}
+function _invFindAmt(text,labels){
+  for(var i=0;i<labels.length;i++){
+    var lab=labels[i].replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+    // label -> optional rate like @9% / 9.00% (skipped) -> optional Rs/INR -> amount
+    var re=new RegExp(lab+'[^0-9\\n]{0,18}(?:[0-9]{1,2}(?:\\.[0-9]+)?\\s?%[^0-9\\n]{0,12})?(?:rs\\.?|inr|₹)?[ \\t:.\\-]*([0-9][0-9,]*(?:\\.[0-9]{1,2})?)','i');
+    var m=text.match(re);
+    if(m&&m[1]){
+      var v=m[1];
+      // bare integers (rate ho sakta hai) skip — except total/taxable/gst labels
+      if(v.indexOf(',')>-1||v.indexOf('.')>-1||/total|taxable|taxble|payable|net|gst/.test(labels[i]))return _invNum(v);
+    }
+  }
+  return '';
+}
+function _invMaxAmt(text){
+  // sabse bada amount (comma ya decimal ya /- wala) — grand total fallback
+  var re=/([0-9]{1,3}(?:,[0-9]{2,3})+(?:\.[0-9]{1,2})?|[0-9]+\.[0-9]{1,2})\s*\/?-?/g,m,best=0,bestStr='';
+  while((m=re.exec(text))!==null){var n=_invToFloat(m[1]);if(n>best){best=n;bestStr=_invNum(m[1]);}}
+  return bestStr;
+}
+function parseInvoice(rawText){
+  var text=_invClean(rawText);
+  var o={invoiceNo:'',invoiceDate:'',supplierName:'',supplierGstin:'',buyerGstin:'',taxable:'',cgst:'',sgst:'',igst:'',total:''};
+
+  // GSTIN (15 char) — pehla supplier, doosra buyer
+  var gstRe=/\b(\d{2}[A-Z]{5}\d{4}[A-Z][A-Z\d]Z[A-Z\d])\b/g;
+  var gstins=[],gm;
+  while((gm=gstRe.exec(text.toUpperCase()))!==null){if(gstins.indexOf(gm[1])===-1)gstins.push(gm[1]);}
+  if(gstins[0])o.supplierGstin=gstins[0];
+  if(gstins[1])o.buyerGstin=gstins[1];
+
+  // Invoice number — label ke baad window me se pehla invoice-jaisa token (digit-wala)
+  var stop=/^(no|date|dated|number|invoice|bill|inv|tax|original|copy|duplicate|num|gstin|uin|value|order|by|eway|rate|amount|qty|hsn|sac|code|state|to|days|mode|terms|note|delivery|despatch|document|destination|ref)$/i;
+  function _valid(v){return v&&v.length>=2&&/[0-9]/.test(v)&&!stop.test(v);}
+  function _invFrom(label){
+    var re=new RegExp(label+'\\.?\\s*[:#\\-]?','ig'),m;
+    while((m=re.exec(text))!==null){
+      var win=text.substr(m.index+m[0].length,46);
+      var toks=win.match(/[A-Z0-9][A-Z0-9\/\-]{1,24}/ig)||[];
+      for(var k=0;k<toks.length;k++){var v=toks[k].replace(/[.,]+$/,'');if(_valid(v))return v;}
+    }
+    return '';
+  }
+  var iv=_invFrom('invoice\\s*no')||_invFrom('invoice\\s*number')||_invFrom('invoice\\s*#')||_invFrom('invoice\\s*[:#]')||_invFrom('(?:bill|inv)\\s*no');
+  o.invoiceNo=iv;
+
+  // Date — month-name date (9-Jul-2018) sabse reliable; phir label-window; phir koi numeric date
+  var MON='(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)';
+  var Dnum='\\d{1,2}[\\/\\-.]\\d{1,2}[\\/\\-.]\\d{2,4}';
+  var Dmon='\\d{1,2}[\\/\\-. ]'+MON+'[a-z]*[\\/\\-. ]\\d{2,4}';
+  var Dany='(?:'+Dmon+'|'+Dnum+')';
+  function _dateWin(label){
+    var re=new RegExp(label+'\\.?\\s*[:\\-]?','ig'),m;
+    while((m=re.exec(text))!==null){
+      var win=text.substr(m.index+m[0].length,42);
+      var dm=win.match(new RegExp('('+Dany+')','i'));
+      if(dm)return dm[1];
+    }
+    return '';
+  }
+  var dd='';
+  var dmon=text.match(new RegExp('('+Dmon+')','i'));if(dmon)dd=dmon[1];           // month-name date prefer
+  if(!dd)dd=_dateWin('invoice\\s*date')||_dateWin('dated')||_dateWin('date');     // label window
+  if(!dd){var dn=text.match(new RegExp('('+Dnum+')'));if(dn)dd=dn[1];}            // last fallback
+  o.invoiceDate=(dd||'').trim();
+
+  // Amounts
+  o.cgst=_invFindAmt(text,['cgst @','cgst amount','add cgst','cgst']);
+  o.sgst=_invFindAmt(text,['sgst @','sgst/utgst','sgst amount','add sgst','sgst','utgst']);
+  o.igst=_invFindAmt(text,['igst @','igst amount','add igst','igst']);
+  o.taxable=_invFindAmt(text,['taxable value','taxble value','taxable amount','taxable amt','taxble','total taxable','sub total','subtotal','amount before tax']);
+  o.total=_invFindAmt(text,['grand total','total invoice value','invoice total','total amount','amount payable','net amount','total payable','net payable']);
+  if(!o.total)o.total=_invMaxAmt(text); // fallback: largest amount
+
+  // taxable missing? total - taxes se derive karo
+  if(!o.taxable&&o.total){
+    var t=_invToFloat(o.total)-_invToFloat(o.cgst)-_invToFloat(o.sgst)-_invToFloat(o.igst);
+    if(t>0)o.taxable=String(Math.round(t*100)/100);
+  }
+
+  // Supplier name heuristic: first meaningful line (newline preserved)
+  var lines=text.split(/\n|\r/).map(function(l){return l.trim();}).filter(function(l){return l.length>2;});
+  for(var li=0;li<lines.length&&li<6;li++){
+    var l=lines[li];
+    if(/gstin|invoice|tax\s*invoice|bill\s*no|^date|original|duplicate|^[0-9₹.,\-\/ %]+$/i.test(l))continue;
+    o.supplierName=l.replace(/\s{2,}/g,' ').substring(0,60);break;
+  }
+  return o;
+}
+
+async function _invExtractImage(file){
+  // image -> dataURL -> OCR (newline-preserving)
+  var dataUrl=await new Promise(function(res,rej){var r=new FileReader();r.onload=function(){res(r.result);};r.onerror=rej;r.readAsDataURL(file);});
+  return await _invOCR(dataUrl);
+}
+// OCR jo line-breaks preserve kare (invoice tables ke liye zaroori)
+async function _invOCR(img){try{var w=await getOCRWorker();var r=await w.recognize(img);return (r.data.text||'').replace(/[ \t]+/g,' ').replace(/\n{2,}/g,'\n').trim();}catch(e){return '';}}
+// pdf.js text ko Y-coordinate se lines mein reconstruct karo (label|value ek line par)
+async function _invPdfLines(pdfDoc,pageIdx){
+  try{
+    var page=await pdfDoc.getPage(pageIdx+1);
+    var tc=await page.getTextContent();
+    var items=tc.items.map(function(it){return {s:it.str,x:it.transform[4],y:Math.round(it.transform[5])};}).filter(function(i){return i.s&&i.s.trim().length;});
+    if(!items.length)return '';
+    items.sort(function(a,b){return (b.y-a.y)||(a.x-b.x);});
+    var lines=[],cur=null,curY=null,tol=3;
+    items.forEach(function(it){
+      if(curY===null||Math.abs(it.y-curY)>tol){if(cur)lines.push(cur);cur={parts:[it]};curY=it.y;}
+      else{cur.parts.push(it);}
+    });
+    if(cur)lines.push(cur);
+    return lines.map(function(l){l.parts.sort(function(a,b){return a.x-b.x;});return l.parts.map(function(p){return p.s;}).join(' ').replace(/[ \t]+/g,' ').trim();}).filter(function(s){return s.length;}).join('\n');
+  }catch(e){return '';}
+}
+
+async function scanInvoices(){
+  if(!invFiles.length){showToast('Pehle invoice files select karein','error');return;}
+  var caseIns=document.getElementById('invCaseInsensitive').checked;
+  var partial=document.getElementById('invPartialMatch').checked;
+  var useOCR=document.getElementById('invUseOCR').checked;
+  var keywords=getInvFilterKeywords();
+
+  var btn=document.getElementById('invScanBtn');if(btn){btn.disabled=true;btn.textContent='Scanning...';}
+  var pw=document.getElementById('invScanProgress');if(pw)pw.classList.add('visible');
+  var rs=document.getElementById('invScanResult');if(rs)rs.style.display='none';
+  invoiceRows=[];
+  var skipped=0,ocrUsed=0,blankSkipped=0;
+
+  try{
+    // total page count estimate for progress
+    var totalUnits=0,unitDone=0,pdfDocs=[];
+    for(var f=0;f<invFiles.length;f++){
+      if(invFiles[f].type==='pdf'){
+        var buf=await invFiles[f].file.arrayBuffer();
+        var doc=null;try{doc=await pdfjsLib.getDocument({data:new Uint8Array(buf)}).promise;}catch(e){}
+        pdfDocs[f]=doc;totalUnits+=doc?doc.numPages:1;
+      }else{pdfDocs[f]=null;totalUnits+=1;}
+    }
+    if(totalUnits===0)totalUnits=1;
+
+    for(var fi=0;fi<invFiles.length;fi++){
+      var item=invFiles[fi];
+      if(item.type==='image'){
+        unitDone++;
+        setInvProg('OCR: '+item.name,Math.round(unitDone/totalUnits*92));
+        var imgText='';
+        if(useOCR){imgText=await _invExtractImage(item.file);if(imgText)ocrUsed++;}
+        if((imgText||'').replace(/\s+/g,'').length<15){blankSkipped++;continue;}
+        _invPushRow(item.name,1,imgText,keywords,caseIns,partial,function(){skipped++;});
+      }else{
+        var pdoc=pdfDocs[fi];
+        var np=pdoc?pdoc.numPages:0;
+        if(!pdoc){unitDone++;continue;}
+        for(var p=0;p<np;p++){
+          unitDone++;
+          setInvProg('Text scan: '+item.name+' (pg '+(p+1)+'/'+np+')',Math.round(unitDone/totalUnits*92));
+          var pageText=await _invPdfLines(pdoc,p);
+          var wasOCR=false;
+          if((!pageText||pageText.replace(/\s+/g,'').length<15)&&useOCR){
+            setInvProg('OCR: '+item.name+' (pg '+(p+1)+'/'+np+')',Math.round(unitDone/totalUnits*92));
+            var imgData=await renderPageToDataURL(pdoc,p,1.8);
+            if(imgData){var ot=await _invOCR(imgData);if(ot){pageText=ot;wasOCR=true;ocrUsed++;}}
+          }
+          // truly blank page -> skip (koi junk row nahi)
+          if((pageText||'').replace(/\s+/g,'').length<15){blankSkipped++;continue;}
+          _invPushRow(item.name,p+1,pageText,keywords,caseIns,partial,function(){skipped++;});
+        }
+      }
+    }
+    await terminateOCRWorker();
+    setInvProg('Done!',100);
+    renderInvoiceTable();
+    if(rs)rs.style.display='block';
+    var summary='<strong>Files:</strong> '+invFiles.length+' | <strong>Invoices extracted:</strong> '+invoiceRows.length+' | <strong>OCR used:</strong> '+ocrUsed+(blankSkipped?' | <strong>Blank pages skipped:</strong> '+blankSkipped:'')+(keywords.length?' | <strong>Filtered out:</strong> '+skipped:'');
+    var sm=document.getElementById('invSummary');if(sm)sm.innerHTML=summary;
+    showToast(invoiceRows.length+' invoices extracted ✅','success');
+  }catch(e){showToast('Failed: '+e.message,'error');console.error(e);}
+  if(btn){btn.disabled=false;btn.textContent='🔍 Scan & Extract';}
+  if(pw)setTimeout(function(){pw.classList.remove('visible');},1000);
+}
+
+function _invPushRow(fileName,pageNo,text,keywords,caseIns,partial,onSkip){
+  if(keywords.length){
+    var matched=matchClientName(text||'',keywords,caseIns,partial);
+    if(!matched){if(onSkip)onSkip();return;}
+  }
+  var parsed=parseInvoice(text||'');
+  parsed.file=fileName;parsed.page=pageNo;
+  invoiceRows.push(parsed);
+}
+
+function addBlankInvoiceRow(){
+  invoiceRows.push({file:'(manual)',page:'',invoiceNo:'',invoiceDate:'',supplierName:'',supplierGstin:'',buyerGstin:'',taxable:'',cgst:'',sgst:'',igst:'',total:''});
+  renderInvoiceTable();
+  var rs=document.getElementById('invScanResult');if(rs)rs.style.display='block';
+}
+function delInvoiceRow(i){invoiceRows.splice(i,1);renderInvoiceTable();}
+function invEdit(i,field,val){if(invoiceRows[i])invoiceRows[i][field]=val;}
+
+function renderInvoiceTable(){
+  var tb=document.getElementById('invTableBody');if(!tb)return;
+  if(!invoiceRows.length){tb.innerHTML='<tr><td colspan="14" style="text-align:center;color:var(--muted);padding:14px;">Koi invoice extract nahi hui.</td></tr>';return;}
+  tb.innerHTML=invoiceRows.map(function(r,i){
+    function inp(field,cls){return '<input class="inv-cell-input '+(cls||'')+'" value="'+escH(r[field]||'')+'" onchange="invEdit('+i+',\''+field+'\',this.value)">';}
+    return '<tr>'+
+      '<td class="page-num-cell" style="color:#16a34a;">'+(i+1)+'</td>'+
+      '<td><div class="preview-text" title="'+escH(r.file)+'">'+escH(r.file)+'</div></td>'+
+      '<td style="text-align:center;">'+escH(String(r.page||''))+'</td>'+
+      '<td>'+inp('invoiceNo')+'</td>'+
+      '<td>'+inp('invoiceDate')+'</td>'+
+      '<td>'+inp('supplierName')+'</td>'+
+      '<td>'+inp('supplierGstin')+'</td>'+
+      '<td>'+inp('buyerGstin')+'</td>'+
+      '<td>'+inp('taxable','inv-num')+'</td>'+
+      '<td>'+inp('cgst','inv-num')+'</td>'+
+      '<td>'+inp('sgst','inv-num')+'</td>'+
+      '<td>'+inp('igst','inv-num')+'</td>'+
+      '<td>'+inp('total','inv-num')+'</td>'+
+      '<td class="inv-del"><button class="inv-del-btn" onclick="delInvoiceRow('+i+')">✕</button></td>'+
+    '</tr>';
+  }).join('');
+}
+
+function exportInvoiceExcel(){
+  if(!invoiceRows.length){showToast('Export ke liye data nahi hai','error');return;}
+  if(typeof XLSX==='undefined'){showToast('Excel library load nahi hui','error');return;}
+  var num=function(v){var n=parseFloat(String(v).replace(/,/g,''));return isNaN(n)?'':n;};
+  var data=invoiceRows.map(function(r,i){
+    return {
+      'S.No':i+1,
+      'Source File':r.file||'',
+      'Page':r.page||'',
+      'Invoice No':r.invoiceNo||'',
+      'Invoice Date':r.invoiceDate||'',
+      'Supplier Name':r.supplierName||'',
+      'Supplier GSTIN':r.supplierGstin||'',
+      'Buyer GSTIN':r.buyerGstin||'',
+      'Taxable Value':num(r.taxable),
+      'CGST':num(r.cgst),
+      'SGST':num(r.sgst),
+      'IGST':num(r.igst),
+      'Invoice Total':num(r.total)
+    };
+  });
+  try{
+    var ws=XLSX.utils.json_to_sheet(data);
+    ws['!cols']=[{wch:6},{wch:26},{wch:6},{wch:16},{wch:13},{wch:24},{wch:18},{wch:18},{wch:14},{wch:11},{wch:11},{wch:11},{wch:14}];
+    var wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,ws,'Invoices');
+    var fname='Invoice_Data_'+new Date().toISOString().slice(0,10)+'.xlsx';
+    XLSX.writeFile(wb,fname);
+    showToast('Excel ready! ✅','success');
+  }catch(e){showToast('Excel export failed: '+e.message,'error');console.error(e);}
 }
 
 // Resolve any queued stub calls now that all functions are defined
