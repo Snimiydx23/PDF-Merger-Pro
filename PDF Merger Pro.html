@@ -3251,20 +3251,40 @@ function parseInvoice(rawText){
   if(gstins[0])o.supplierGstin=gstins[0];
   if(gstins[1])o.buyerGstin=gstins[1];
 
-  // Invoice number — keyword wale candidates me se pehla valid (digit-wala, non-stopword)
-  var stop=/^(no|date|number|invoice|bill|inv|tax|original|copy|num|gstin|value|order|by|eway|rate|amount|qty|hsn|code|state|to)$/i;
-  function _valid(v){return v&&/[0-9]/.test(v)&&!stop.test(v);}
-  function _firstInv(re){var m;re.lastIndex=0;while((m=re.exec(text))!==null){var v=m[1].replace(/[.,]+$/,'');if(_valid(v))return v;}return '';}
-  var iv=_firstInv(/invoice\s*(?:no\.?|number|#|num)\s*[:#\-.]?\s*([A-Z0-9][A-Z0-9\/\-]{1,24})/ig);
-  if(!iv)iv=_firstInv(/invoice\s*[:#]\s*([A-Z0-9][A-Z0-9\/\-]{1,24})/ig);
-  if(!iv)iv=_firstInv(/(?:bill|inv)\s*(?:no\.?|number|#|num)\s*[:#\-.]?\s*([A-Z0-9][A-Z0-9\/\-]{1,24})/ig);
+  // Invoice number — label ke baad window me se pehla invoice-jaisa token (digit-wala)
+  var stop=/^(no|date|dated|number|invoice|bill|inv|tax|original|copy|duplicate|num|gstin|uin|value|order|by|eway|rate|amount|qty|hsn|sac|code|state|to|days|mode|terms|note|delivery|despatch|document|destination|ref)$/i;
+  function _valid(v){return v&&v.length>=2&&/[0-9]/.test(v)&&!stop.test(v);}
+  function _invFrom(label){
+    var re=new RegExp(label+'\\.?\\s*[:#\\-]?','ig'),m;
+    while((m=re.exec(text))!==null){
+      var win=text.substr(m.index+m[0].length,46);
+      var toks=win.match(/[A-Z0-9][A-Z0-9\/\-]{1,24}/ig)||[];
+      for(var k=0;k<toks.length;k++){var v=toks[k].replace(/[.,]+$/,'');if(_valid(v))return v;}
+    }
+    return '';
+  }
+  var iv=_invFrom('invoice\\s*no')||_invFrom('invoice\\s*number')||_invFrom('invoice\\s*#')||_invFrom('invoice\\s*[:#]')||_invFrom('(?:bill|inv)\\s*no');
   o.invoiceNo=iv;
 
-  // Date (label-based then fallback) — invoice date prefer
-  var dM=text.match(/(?:invoice\s*date|inv\s*date|dated)\s*[:\-]?\s*(\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4})/i);
-  if(!dM)dM=text.match(/(?:^|\s)date\s*[:\-]?\s*(\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4})/i);
-  if(dM&&dM[1])o.invoiceDate=dM[1];
-  else{var dM2=text.match(/\b(\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4})\b/);if(dM2)o.invoiceDate=dM2[1];}
+  // Date — month-name date (9-Jul-2018) sabse reliable; phir label-window; phir koi numeric date
+  var MON='(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)';
+  var Dnum='\\d{1,2}[\\/\\-.]\\d{1,2}[\\/\\-.]\\d{2,4}';
+  var Dmon='\\d{1,2}[\\/\\-. ]'+MON+'[a-z]*[\\/\\-. ]\\d{2,4}';
+  var Dany='(?:'+Dmon+'|'+Dnum+')';
+  function _dateWin(label){
+    var re=new RegExp(label+'\\.?\\s*[:\\-]?','ig'),m;
+    while((m=re.exec(text))!==null){
+      var win=text.substr(m.index+m[0].length,42);
+      var dm=win.match(new RegExp('('+Dany+')','i'));
+      if(dm)return dm[1];
+    }
+    return '';
+  }
+  var dd='';
+  var dmon=text.match(new RegExp('('+Dmon+')','i'));if(dmon)dd=dmon[1];           // month-name date prefer
+  if(!dd)dd=_dateWin('invoice\\s*date')||_dateWin('dated')||_dateWin('date');     // label window
+  if(!dd){var dn=text.match(new RegExp('('+Dnum+')'));if(dn)dd=dn[1];}            // last fallback
+  o.invoiceDate=(dd||'').trim();
 
   // Amounts
   o.cgst=_invFindAmt(text,['cgst @','cgst amount','add cgst','cgst']);
