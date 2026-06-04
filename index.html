@@ -24,7 +24,7 @@ function _stub(fn){return function(){if(window['_real_'+fn])window['_real_'+fn].
  'scanDDrop','scanDEnd','dlBlob','dlZip','dStart','dOver','dLeave','dDrop','dEnd',
  'removeMergeItem','renderMergeList',
  'handleInvDrop','addInvFiles','removeInvFile','clearInvoiceTool','scanInvoices',
- 'addBlankInvoiceRow','delInvoiceRow','invEdit','exportInvoiceExcel','toggleInvAI','saveGroqKey'
+ 'addBlankInvoiceRow','delInvoiceRow','invEdit','exportInvoiceExcel','toggleInvAI','saveGroqKey','saveAIEndpoint'
 ].forEach(function(fn){window[fn]=_stub(fn);});
 </script>
 <meta charset="UTF-8">
@@ -1543,8 +1543,9 @@ table.scan-tbl tr:nth-child(even) td{background:var(--opt-bg);}
         <div style="margin-top:12px;border:1px solid var(--border);border-radius:10px;padding:11px 12px;">
           <label class="checkrow" style="font-weight:700;margin:0;"><input type="checkbox" id="invUseAI" onchange="toggleInvAI()"> 🤖 AI Extract mode (Groq) — alag-alag / tedhe formats ke liye</label>
           <div id="invAIBox" style="display:none;margin-top:9px;">
-            <div class="info-box" style="border-color:#86efac;color:#16a34a;">💡 <b>Vercel pe deploy</b>: key UI me khaali chhodo — tool <code>/api/extract</code> call karega jo server par <b>GROQ_API_KEY</b> env var use karega (key browser me kabhi nahi aati). <br>Free Groq key: <b>console.groq.com</b> (no credit card). UI me key daalo to seedhe Groq jaayega (local testing ke liye).</div>
-            <input type="password" id="invGroqKey" class="inv-cell-input" style="width:100%;min-width:0;margin-bottom:7px;" placeholder="(Vercel env var use karne ke liye khaali chhodein) ya gsk_... key paste karein" onchange="saveGroqKey()">
+            <div class="info-box" style="border-color:#86efac;color:#16a34a;">💡 Key UI me khaali chhodo — tool <b>Server Endpoint</b> ko call karega jo server par env var (GROQ/Gemini etc.) se key uthata hai (key browser me kabhi nahi aati). <br>Endpoint khaali = Vercel ka <code>/api/extract</code>. Render use karna ho to apna full URL daalo (jaise <code>https://your-app.onrender.com/api/extract</code>). UI me key daalo to seedhe Groq (local testing).</div>
+            <input type="password" id="invGroqKey" class="inv-cell-input" style="width:100%;min-width:0;margin-bottom:7px;" placeholder="(Server env var use karne ke liye khaali chhodein) ya gsk_... key paste karein" onchange="saveGroqKey()">
+            <input type="text" id="invAIEndpoint" class="inv-cell-input" style="width:100%;min-width:0;margin-bottom:7px;" placeholder="Server endpoint URL (khaali = /api/extract). Render: https://your-app.onrender.com/api/extract" onchange="saveAIEndpoint()">
             <div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;">
               <select id="invGroqModel" class="inv-cell-input" style="width:auto;min-width:200px;">
                 <option value="llama-3.3-70b-versatile">llama-3.3-70b — best accuracy</option>
@@ -1553,7 +1554,7 @@ table.scan-tbl tr:nth-child(even) td{background:var(--opt-bg);}
                 <option value="qwen/qwen3-32b">qwen3-32b</option>
                 <option value="openai/gpt-oss-120b">gpt-oss-120b</option>
               </select>
-              <button class="btn-sm grey" onclick="saveGroqKey()">💾 Save key</button>
+              <button class="btn-sm grey" onclick="saveGroqKey();saveAIEndpoint()">💾 Save</button>
             </div>
           </div>
         </div>
@@ -3281,7 +3282,7 @@ function parseInvoice(rawText){
     }
     return '';
   }
-  var iv=_invFrom('invoice\\s*no')||_invFrom('invoice\\s*number')||_invFrom('invoice\\s*#')||_invFrom('invoice\\s*[:#]')||_invFrom('(?:bill|inv)\\s*no');
+  var iv=_invFrom('invoice\\s*no')||_invFrom('invoice\\s*number')||_invFrom('invoice\\s*#')||_invFrom('invoice\\s*[:#]')||_invFrom('(?:bill|inv)\\s*no')||_invFrom('invoice\\s*&?\\s*(?:and\\s*)?date');
   o.invoiceNo=iv;
 
   // Date — month-name date (9-Jul-2018) sabse reliable; phir label-window; phir koi numeric date
@@ -3292,16 +3293,19 @@ function parseInvoice(rawText){
   function _dateWin(label){
     var re=new RegExp(label+'\\.?\\s*[:\\-]?','ig'),m;
     while((m=re.exec(text))!==null){
-      var win=text.substr(m.index+m[0].length,42);
-      var dm=win.match(new RegExp('('+Dany+')','i'));
+      var win=text.substr(m.index+m[0].length,46);
+      var dm=win.match(new RegExp('('+Dmon+')','i'));  // month-name pehle (unambiguous)
+      if(dm)return dm[1];
+      dm=win.match(new RegExp('('+Dnum+')'));           // phir numeric
       if(dm)return dm[1];
     }
     return '';
   }
   var dd='';
-  var dmon=text.match(new RegExp('('+Dmon+')','i'));if(dmon)dd=dmon[1];           // month-name date prefer
-  if(!dd)dd=_dateWin('invoice\\s*date')||_dateWin('dated')||_dateWin('date');     // label window
-  if(!dd){var dn=text.match(new RegExp('('+Dnum+')'));if(dn)dd=dn[1];}            // last fallback
+  dd=_dateWin('invoice\\s*date')||_dateWin('invoice\\s*&?\\s*(?:and\\s*)?date')||_dateWin('dated');
+  if(!dd){var dmon=text.match(new RegExp('('+Dmon+')','i'));if(dmon)dd=dmon[1];}   // month-name anywhere
+  if(!dd)dd=_dateWin('date');                                                     // generic date label
+  if(!dd){var dn=text.match(new RegExp('('+Dnum+')'));if(dn)dd=dn[1];}            // last numeric fallback
   o.invoiceDate=(dd||'').trim();
 
   // Amounts
@@ -3318,16 +3322,26 @@ function parseInvoice(rawText){
     if(t>0)o.taxable=String(Math.round(t*100)/100);
   }
 
-  // Supplier name — pehle company-keyword wali line, warna pehli clean line
+  // Supplier name — pehle "For, <Name>" signatory (seller), phir company-keyword line, warna pehli clean line
   var lines=text.split(/\n|\r/).map(function(l){return l.trim();}).filter(function(l){return l.length>2;});
-  var COMP=/\b(enterprises?|limited|ltd|pvt|llp|industr|traders?|trading|agenc(?:y|ies)|corp(?:oration)?|ventures?|udyog|steels?|carbon|associates?|sons|brothers|impex|exports?|imports?|marketing|distributors?|suppliers?|company|& co)\b/i;
-  var BAD=/bank|declaration|generated|jurisdiction|subject to|terms|condition|chargeable|computer/i;
+  var COMP=/\b(enterprises?|limited|ltd|pvt|llp|industr|traders?|trading|agenc(?:y|ies)|corp(?:oration)?|ventures?|udyog|steels?|carbon|associates?|sons|brothers|impex|exports?|imports?|marketing|distributors?|suppliers?|company|& co|foods?|marine|agro|mills?|overseas|sales|engineer(?:s|ing)?|motors?|oils?|cement|plastics?|packaging|textiles?|pharma|chemicals?|electric(?:al|als)?|hardware|global|international|buildcon|infra|builders?|logistics?|projects?|metalics?|metals?)\b/i;
+  var BAD=/bank|declaration|generated|jurisdiction|subject to|terms|condition|chargeable|computer|particulars|signator|purchaser|consignee|buyer|bill to|ship to/i;
   var pick='';
-  for(var li=0;li<lines.length&&li<14;li++){
-    var l=lines[li];
-    if(/^(irn|ack)\b|e-?invoice|gstin|tax\s*invoice/i.test(l))continue;
-    if(COMP.test(l)&&!BAD.test(l)){pick=l;break;}
+  // 1) "For, KALYANI BUILDCON PVT. LTD." jaisa signatory = seller (buyer prominent ho tab bhi sahi)
+  var fre=/\bfor[,:\-\s]+([^\n]{2,70})/ig,fm;
+  while((fm=fre.exec(text))!==null){
+    var cand=fm[1].split(/\s{2,}|\(|authoris|authorized|signator|e ?& ?o/i)[0].trim();
+    if(COMP.test(cand)&&!BAD.test(cand)){pick=cand;break;}
   }
+  // 2) company-keyword wali pehli line (purchaser/buyer block skip)
+  if(!pick){
+    for(var li=0;li<lines.length&&li<14;li++){
+      var l=lines[li];
+      if(/^(irn|ack)\b|e-?invoice|gstin|tax\s*invoice|purchaser|consignee|^buyer\b|bill to|ship to/i.test(l))continue;
+      if(COMP.test(l)&&!BAD.test(l)){pick=l;break;}
+    }
+  }
+  // 3) pehli clean line
   if(!pick){
     for(var lj=0;lj<lines.length&&lj<8;lj++){
       var l2=lines[lj];
@@ -3336,7 +3350,8 @@ function parseInvoice(rawText){
       pick=l2;break;
     }
   }
-  o.supplierName=(pick||'').replace(/\s{2,}/g,' ').substring(0,60);
+  pick=(pick||'').replace(/\s+(?:date[d]?\b|invoice\b|gstin\b|gst\s*no\b).*$/i,'').trim();
+  o.supplierName=pick.replace(/\s{2,}/g,' ').substring(0,60);
   return o;
 }
 
@@ -3462,8 +3477,10 @@ function _invPushRow(fileName,pageNo,text,keywords,caseIns,partial,onSkip,prePar
 function _invSleep(ms){return new Promise(function(r){setTimeout(r,ms);});}
 function _invNum2(v){if(v===null||v===undefined)return '';v=String(v).replace(/[^0-9.\-]/g,'').replace(/(?!^)-/g,'').replace(/\.(?=.*\.)/g,'');return v==='-'?'':v;}
 function _loadGroqKey(){try{return localStorage.getItem('rmaGroqKey')||'';}catch(e){return '';}}
-function saveGroqKey(){var el=document.getElementById('invGroqKey');if(!el)return;try{if(el.value.trim())localStorage.setItem('rmaGroqKey',el.value.trim());else localStorage.removeItem('rmaGroqKey');showToast('Groq key saved (browser me)','success');}catch(e){}}
-function toggleInvAI(){var c=document.getElementById('invUseAI'),b=document.getElementById('invAIBox');if(!c||!b)return;b.style.display=c.checked?'block':'none';if(c.checked){var k=document.getElementById('invGroqKey');if(k&&!k.value)k.value=_loadGroqKey();}}
+function saveGroqKey(){var el=document.getElementById('invGroqKey');if(!el)return;try{if(el.value.trim())localStorage.setItem('rmaGroqKey',el.value.trim());else localStorage.removeItem('rmaGroqKey');showToast('Saved (browser me)','success');}catch(e){}}
+function _loadAIEndpoint(){try{return localStorage.getItem('rmaAIEndpoint')||'';}catch(e){return '';}}
+function saveAIEndpoint(){var el=document.getElementById('invAIEndpoint');if(!el)return;try{var v=el.value.trim();if(v)localStorage.setItem('rmaAIEndpoint',v);else localStorage.removeItem('rmaAIEndpoint');}catch(e){}}
+function toggleInvAI(){var c=document.getElementById('invUseAI'),b=document.getElementById('invAIBox');if(!c||!b)return;b.style.display=c.checked?'block':'none';if(c.checked){var k=document.getElementById('invGroqKey');if(k&&!k.value)k.value=_loadGroqKey();var e=document.getElementById('invAIEndpoint');if(e&&!e.value)e.value=_loadAIEndpoint();}}
 async function _invAIExtract(text,key,model){
   if(!text)return null;
   var sys='You are an invoice data extraction engine for Indian GST tax invoices. Read the (possibly OCR-noisy) invoice text and return ONLY a single JSON object, no markdown fences, no commentary. Keys exactly: invoiceNo, invoiceDate, supplierName, supplierGstin, buyerGstin, taxable, cgst, sgst, igst, total. Rules: amounts must be plain numbers (no currency symbol, no commas, no "/-"), e.g. 96111 or 7330.5; use empty string "" when a field is not present; supplierGstin = the seller/issuer 15-char GSTIN, buyerGstin = the buyer/consignee GSTIN; supplierName = the seller firm name; taxable = total taxable value before tax; cgst, sgst, igst = total tax amounts (not the rate %); total = grand total / invoice total including taxes; keep invoiceDate exactly as printed.';
@@ -3474,7 +3491,9 @@ async function _invAIExtract(text,key,model){
     resp=await fetch('https://api.groq.com/openai/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify(body)});
   }else{
     // UI khaali -> Vercel serverless proxy (server par GROQ_API_KEY env var use hoti hai)
-    resp=await fetch('/api/extract',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({payload:body})});
+    // UI khaali -> server proxy (env var). Endpoint = field/localStorage, default /api/extract (Vercel)
+    var ep=(document.getElementById('invAIEndpoint')&&document.getElementById('invAIEndpoint').value.trim())||_loadAIEndpoint()||'/api/extract';
+    resp=await fetch(ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({payload:body})});
   }
   if(!resp.ok){var t='';try{t=(await resp.json()).error.message;}catch(e){}throw new Error((resp.status===429?'rate limit ':'')+resp.status+(t?': '+t:''));}
   var data=await resp.json();
