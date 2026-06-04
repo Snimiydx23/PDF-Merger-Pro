@@ -1541,7 +1541,7 @@ table.scan-tbl tr:nth-child(even) td{background:var(--opt-bg);}
         <label class="checkrow"><input type="checkbox" id="invUseOCR" checked> OCR for scanned/image pages (Tesseract)</label>
 
         <div style="margin-top:12px;border:1px solid var(--border);border-radius:10px;padding:11px 12px;">
-          <label class="checkrow" style="font-weight:700;margin:0;"><input type="checkbox" id="invUseAI" onchange="toggleInvAI()"> 🤖 AI Extract mode (Groq) — alag-alag / tedhe formats ke liye</label>
+          <label class="checkrow" style="font-weight:700;margin:0;"><input type="checkbox" id="invUseAI" onchange="toggleInvAI()"> 🤖 AI Extract mode</label>
           <div id="invAIBox" style="display:none;margin-top:9px;">
             <div class="info-box" style="border-color:#86efac;color:#16a34a;">💡 Key UI me khaali chhodo — tool <b>Server Endpoint</b> ko call karega jo server par env var (GROQ/Gemini etc.) se key uthata hai (key browser me kabhi nahi aati). <br>Endpoint khaali = Vercel ka <code>/api/extract</code>. Render use karna ho to apna full URL daalo (jaise <code>https://your-app.onrender.com/api/extract</code>). UI me key daalo to seedhe Groq (local testing).</div>
             <input type="password" id="invGroqKey" class="inv-cell-input" style="width:100%;min-width:0;margin-bottom:7px;" placeholder="(Server env var use karne ke liye khaali chhodein) ya gsk_... key paste karein" onchange="saveGroqKey()">
