@@ -3383,9 +3383,14 @@ async function scanInvoices(){
   var skipped=0,ocrUsed=0,blankSkipped=0,aiUsed=0,aiFail=0;
 
   // text -> parsed object (AI agar on, warna regex). AI fail hone par regex fallback.
-  async function _parseOf(text,label){
+  // fileBlob + fileName: actual file passed to Render server (Mistral Vision)
+  async function _parseOf(text, label, fileBlob, fileName){
     if(useAI){
-      try{ if(aiUsed>0)await _invSleep(320); var r=await _invAIExtract(text,groqKey,groqModel); if(r){aiUsed++;return r;} }
+      try{
+        if(aiUsed>0)await _invSleep(500);
+        var r=await _invAIExtract(text, groqKey, groqModel, fileBlob, fileName);
+        if(r){aiUsed++;return r;}
+      }
       catch(e){aiFail++;console.warn('AI extract fail, regex fallback:',e.message);}
     }
     return parseInvoice(text);
@@ -3411,7 +3416,7 @@ async function scanInvoices(){
         var imgText='';
         if(useOCR){imgText=await _invExtractImage(item.file);if(imgText)ocrUsed++;}
         if((imgText||'').replace(/\s+/g,'').length<15){blankSkipped++;continue;}
-        var pr1=await _parseOf(imgText,item.name);
+        var pr1=await _parseOf(imgText,item.name,item.file,item.name);
         _invPushRow(item.name,1,imgText,keywords,caseIns,partial,function(){skipped++;},pr1);
       }else{
         var pdoc=pdfDocs[fi];
@@ -3430,7 +3435,7 @@ async function scanInvoices(){
           // truly blank page -> skip (koi junk row nahi)
           if((pageText||'').replace(/\s+/g,'').length<15){blankSkipped++;continue;}
           if(useAI)setInvProg('AI extract: '+item.name+' (pg '+(p+1)+'/'+np+')',Math.round(unitDone/totalUnits*92));
-          var pr2=await _parseOf(pageText,item.name);
+          var pr2=await _parseOf(pageText,item.name,item.file,item.name);
           _invPushRow(item.name,p+1,pageText,keywords,caseIns,partial,function(){skipped++;},pr2);
         }
       }
@@ -3465,26 +3470,40 @@ function saveGroqKey(){var el=document.getElementById('invGroqKey');if(!el)retur
 function _loadAIEndpoint(){try{return localStorage.getItem('rmaAIEndpoint')||'';}catch(e){return '';}}
 function saveAIEndpoint(){var el=document.getElementById('invAIEndpoint');if(!el)return;try{var v=el.value.trim();if(v)localStorage.setItem('rmaAIEndpoint',v);else localStorage.removeItem('rmaAIEndpoint');}catch(e){}}
 function toggleInvAI(){var c=document.getElementById('invUseAI'),b=document.getElementById('invAIBox');if(!c||!b)return;b.style.display=c.checked?'block':'none';if(c.checked){var k=document.getElementById('invGroqKey');if(k&&!k.value)k.value=_loadGroqKey();var e=document.getElementById('invAIEndpoint');if(e&&!e.value)e.value=_loadAIEndpoint();}}
-async function _invAIExtract(text,key,model){
-  if(!text)return null;
-  var sys='You are an invoice data extraction engine for Indian GST tax invoices. Read the (possibly OCR-noisy) invoice text and return ONLY a single JSON object, no markdown fences, no commentary. Keys exactly: invoiceNo, invoiceDate, supplierName, supplierGstin, buyerGstin, taxable, cgst, sgst, igst, total. Rules: amounts must be plain numbers (no currency symbol, no commas, no "/-"), e.g. 96111 or 7330.5; use empty string "" when a field is not present; supplierGstin = the seller/issuer 15-char GSTIN, buyerGstin = the buyer/consignee GSTIN; supplierName = the seller firm name; taxable = total taxable value before tax; cgst, sgst, igst = total tax amounts (not the rate %); total = grand total / invoice total including taxes; keep invoiceDate exactly as printed.';
-  var body={model:model||'llama-3.3-70b-versatile',temperature:0,response_format:{type:'json_object'},messages:[{role:'system',content:sys},{role:'user',content:'INVOICE TEXT:\n'+String(text).slice(0,6000)}]};
-  var resp;
-  if(key){
-    // Direct key (should not happen now — key is always empty)
-    resp=await fetch('https://api.groq.com/openai/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify(body)});
-  }else{
-    // Hardcoded Render endpoint — server uses MISTRAL_API_KEY env var
-    var ep='https://invoice-api-server.onrender.com/api/extract';
-    resp=await fetch(ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({payload:body})});
+// _invAIExtract: sends actual file to invoice-api-server (Render) via multipart FormData
+// server.js expects: POST /api/extract  multipart  fields: files[] + prompt
+async function _invAIExtract(text, key, model, fileBlob, fileName) {
+  if (!fileBlob) return null;
+  var prompt = 'Extract Indian GST invoice data. Return one JSON object per invoice with these exact keys: invoiceNo, invoiceDate, supplierName, supplierGstin, buyerGstin, taxable, cgst, sgst, igst, total. Rules: amounts as plain numbers (no currency symbol, no commas), empty string if not present, supplierGstin = seller 15-char GSTIN, buyerGstin = buyer GSTIN, taxable = total taxable value before tax, cgst/sgst/igst = total tax amounts not rate percent, total = grand total including taxes, invoiceDate exactly as printed.';
+  var ep = 'https://invoice-api-server.onrender.com/api/extract';
+  var fd = new FormData();
+  fd.append('files', fileBlob, fileName || 'invoice');
+  fd.append('prompt', prompt);
+  var resp = await fetch(ep, { method: 'POST', body: fd });
+  if (!resp.ok) { var t = ''; try { t = (await resp.json()).error || ''; } catch(e) {} throw new Error(resp.status + (t ? ': ' + t : '')); }
+  var data = await resp.json();
+  var rows = data.data || [];
+  if (!rows.length) return null;
+  var r = rows[0];
+  function g(obj, candidates) {
+    for (var i = 0; i < candidates.length; i++) {
+      for (var k in obj) { if (k.toLowerCase().replace(/[^a-z0-9]/g,'').indexOf(candidates[i]) !== -1) return String(obj[k] || ''); }
+    }
+    return '';
   }
-  if(!resp.ok){var t='';try{t=(await resp.json()).error.message;}catch(e){}throw new Error((resp.status===429?'rate limit ':'')+resp.status+(t?': '+t:''));}
-  var data=await resp.json();
-  var content=(data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content)||'';
-  var obj=JSON.parse(content.replace(/```json|```/g,'').trim());
-  return {invoiceNo:String(obj.invoiceNo||''),invoiceDate:String(obj.invoiceDate||''),supplierName:String(obj.supplierName||''),supplierGstin:String(obj.supplierGstin||'').toUpperCase(),buyerGstin:String(obj.buyerGstin||'').toUpperCase(),taxable:_invNum2(obj.taxable),cgst:_invNum2(obj.cgst),sgst:_invNum2(obj.sgst),igst:_invNum2(obj.igst),total:_invNum2(obj.total)};
+  return {
+    invoiceNo:    g(r, ['invoiceno','invoice#','invno','billno']),
+    invoiceDate:  g(r, ['invoicedate','invoicedt','date']),
+    supplierName: g(r, ['suppliername','vendorname','sellername','partyname','supplier','vendor','seller']),
+    supplierGstin: g(r, ['suppliergstin','sellergstin','gstin']).toUpperCase(),
+    buyerGstin:   g(r, ['buyergstin','consigneegstin','billedtogstin','buyergstin']).toUpperCase(),
+    taxable:      _invNum2(g(r, ['taxablevalue','taxable','assessable','basic'])),
+    cgst:         _invNum2(g(r, ['cgst'])),
+    sgst:         _invNum2(g(r, ['sgst'])),
+    igst:         _invNum2(g(r, ['igst'])),
+    total:        _invNum2(g(r, ['grandtotal','invoicetotal','total','amountpayable']))
+  };
 }
-
 function addBlankInvoiceRow(){
   invoiceRows.push({file:'(manual)',page:'',invoiceNo:'',invoiceDate:'',supplierName:'',supplierGstin:'',buyerGstin:'',taxable:'',cgst:'',sgst:'',igst:'',total:''});
   renderInvoiceTable();
