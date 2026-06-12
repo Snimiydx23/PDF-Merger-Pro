@@ -3475,7 +3475,7 @@ async function _invAIExtract(text,key,model){
     resp=await fetch('https://api.groq.com/openai/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify(body)});
   }else{
     // Hardcoded Render endpoint — server uses MISTRAL_API_KEY env var
-    var ep='https://rma-one-pager.onrender.com/api/extract';
+    var ep='https://invoice-api-server.onrender.com/api/extract';
     resp=await fetch(ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({payload:body})});
   }
   if(!resp.ok){var t='';try{t=(await resp.json()).error.message;}catch(e){}throw new Error((resp.status===429?'rate limit ':'')+resp.status+(t?': '+t:''));}
