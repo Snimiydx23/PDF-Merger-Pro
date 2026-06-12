@@ -61,13 +61,14 @@ var PROVIDERS = {
   }
 };
 
-// agar LLM_PROVIDER set nahi hai to: pehla provider jiski key set hai, warna groq
+// agar LLM_PROVIDER set nahi hai to: mistral (MISTRAL_API_KEY prefer), warna pehla provider jiski key set hai
 function pickProvider(requested) {
   if (requested && PROVIDERS[requested]) return requested;
   var envP = (process.env.LLM_PROVIDER || '').toLowerCase().trim();
   if (PROVIDERS[envP]) return envP;
+  if (process.env.MISTRAL_API_KEY) return 'mistral';
   for (var p in PROVIDERS) { if (process.env[PROVIDERS[p].env]) return p; }
-  return 'groq';
+  return 'mistral';
 }
 
 module.exports = async (req, res) => {
