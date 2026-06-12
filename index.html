@@ -3414,8 +3414,9 @@ async function scanInvoices(){
         unitDone++;
         setInvProg((useAI?'AI: ':'OCR: ')+item.name,Math.round(unitDone/totalUnits*92));
         var imgText='';
-        if(useOCR){imgText=await _invExtractImage(item.file);if(imgText)ocrUsed++;}
-        if((imgText||'').replace(/\s+/g,'').length<15){blankSkipped++;continue;}
+        // AI mode me OCR skip — file seedha server ko jaayegi (blank check bypass)
+        if(!useAI && useOCR){imgText=await _invExtractImage(item.file);if(imgText)ocrUsed++;}
+        if(!useAI && (imgText||'').replace(/\s+/g,'').length<15){blankSkipped++;continue;}
         var pr1=await _parseOf(imgText,item.name,item.file,item.name);
         _invPushRow(item.name,1,imgText,keywords,caseIns,partial,function(){skipped++;},pr1);
       }else{
@@ -3432,8 +3433,8 @@ async function scanInvoices(){
             var imgData=await renderPageToDataURL(pdoc,p,1.8);
             if(imgData){var ot=await _invOCR(imgData);if(ot){pageText=ot;wasOCR=true;ocrUsed++;}}
           }
-          // truly blank page -> skip (koi junk row nahi)
-          if((pageText||'').replace(/\s+/g,'').length<15){blankSkipped++;continue;}
+          // truly blank page -> skip (AI mode me file seedha server ko jaati hai, skip nahi)
+          if(!useAI && (pageText||'').replace(/\s+/g,'').length<15){blankSkipped++;continue;}
           if(useAI)setInvProg('AI extract: '+item.name+' (pg '+(p+1)+'/'+np+')',Math.round(unitDone/totalUnits*92));
           var pr2=await _parseOf(pageText,item.name,item.file,item.name);
           _invPushRow(item.name,p+1,pageText,keywords,caseIns,partial,function(){skipped++;},pr2);
