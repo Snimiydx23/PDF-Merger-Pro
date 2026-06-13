@@ -24,7 +24,7 @@ function _stub(fn){return function(){if(window['_real_'+fn])window['_real_'+fn].
  'scanDDrop','scanDEnd','dlBlob','dlZip','dStart','dOver','dLeave','dDrop','dEnd',
  'removeMergeItem','renderMergeList',
  'handleInvDrop','addInvFiles','removeInvFile','clearInvoiceTool','scanInvoices',
- 'addBlankInvoiceRow','delInvoiceRow','invEdit','exportInvoiceExcel','toggleInvAI','saveGroqKey'
+ 'addBlankInvoiceRow','delInvoiceRow','invEdit','exportInvoiceExcel','toggleInvAI','saveGroqKey','saveAIEndpoint'
 ].forEach(function(fn){window[fn]=_stub(fn);});
 </script>
 <meta charset="UTF-8">
@@ -1541,21 +1541,7 @@ table.scan-tbl tr:nth-child(even) td{background:var(--opt-bg);}
         <label class="checkrow"><input type="checkbox" id="invUseOCR" checked> OCR for scanned/image pages (Tesseract)</label>
 
         <div style="margin-top:12px;border:1px solid var(--border);border-radius:10px;padding:11px 12px;">
-          <label class="checkrow" style="font-weight:700;margin:0;"><input type="checkbox" id="invUseAI" onchange="toggleInvAI()"> 🤖 AI Extract mode (Groq) — alag-alag / tedhe formats ke liye</label>
-          <div id="invAIBox" style="display:none;margin-top:9px;">
-            <div class="info-box" style="border-color:#86efac;color:#16a34a;">💡 <b>Vercel pe deploy</b>: key UI me khaali chhodo — tool <code>/api/extract</code> call karega jo server par <b>GROQ_API_KEY</b> env var use karega (key browser me kabhi nahi aati). <br>Free Groq key: <b>console.groq.com</b> (no credit card). UI me key daalo to seedhe Groq jaayega (local testing ke liye).</div>
-            <input type="password" id="invGroqKey" class="inv-cell-input" style="width:100%;min-width:0;margin-bottom:7px;" placeholder="(Vercel env var use karne ke liye khaali chhodein) ya gsk_... key paste karein" onchange="saveGroqKey()">
-            <div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;">
-              <select id="invGroqModel" class="inv-cell-input" style="width:auto;min-width:200px;">
-                <option value="llama-3.3-70b-versatile">llama-3.3-70b — best accuracy</option>
-                <option value="llama-3.1-8b-instant">llama-3.1-8b — fastest, highest daily limit</option>
-                <option value="meta-llama/llama-4-scout-17b-16e-instruct">llama-4-scout</option>
-                <option value="qwen/qwen3-32b">qwen3-32b</option>
-                <option value="openai/gpt-oss-120b">gpt-oss-120b</option>
-              </select>
-              <button class="btn-sm grey" onclick="saveGroqKey()">💾 Save key</button>
-            </div>
-          </div>
+          <label class="checkrow" style="font-weight:700;margin:0;"><input type="checkbox" id="invUseAI"> 🤖 AI Extract mode</label>
         </div>
 
         <div style="margin-top:12px;">
@@ -3281,7 +3267,7 @@ function parseInvoice(rawText){
     }
     return '';
   }
-  var iv=_invFrom('invoice\\s*no')||_invFrom('invoice\\s*number')||_invFrom('invoice\\s*#')||_invFrom('invoice\\s*[:#]')||_invFrom('(?:bill|inv)\\s*no');
+  var iv=_invFrom('invoice\\s*no')||_invFrom('invoice\\s*number')||_invFrom('invoice\\s*#')||_invFrom('invoice\\s*[:#]')||_invFrom('(?:bill|inv)\\s*no')||_invFrom('invoice\\s*&?\\s*(?:and\\s*)?date');
   o.invoiceNo=iv;
 
   // Date — month-name date (9-Jul-2018) sabse reliable; phir label-window; phir koi numeric date
@@ -3292,16 +3278,19 @@ function parseInvoice(rawText){
   function _dateWin(label){
     var re=new RegExp(label+'\\.?\\s*[:\\-]?','ig'),m;
     while((m=re.exec(text))!==null){
-      var win=text.substr(m.index+m[0].length,42);
-      var dm=win.match(new RegExp('('+Dany+')','i'));
+      var win=text.substr(m.index+m[0].length,46);
+      var dm=win.match(new RegExp('('+Dmon+')','i'));  // month-name pehle (unambiguous)
+      if(dm)return dm[1];
+      dm=win.match(new RegExp('('+Dnum+')'));           // phir numeric
       if(dm)return dm[1];
     }
     return '';
   }
   var dd='';
-  var dmon=text.match(new RegExp('('+Dmon+')','i'));if(dmon)dd=dmon[1];           // month-name date prefer
-  if(!dd)dd=_dateWin('invoice\\s*date')||_dateWin('dated')||_dateWin('date');     // label window
-  if(!dd){var dn=text.match(new RegExp('('+Dnum+')'));if(dn)dd=dn[1];}            // last fallback
+  dd=_dateWin('invoice\\s*date')||_dateWin('invoice\\s*&?\\s*(?:and\\s*)?date')||_dateWin('dated');
+  if(!dd){var dmon=text.match(new RegExp('('+Dmon+')','i'));if(dmon)dd=dmon[1];}   // month-name anywhere
+  if(!dd)dd=_dateWin('date');                                                     // generic date label
+  if(!dd){var dn=text.match(new RegExp('('+Dnum+')'));if(dn)dd=dn[1];}            // last numeric fallback
   o.invoiceDate=(dd||'').trim();
 
   // Amounts
@@ -3318,16 +3307,26 @@ function parseInvoice(rawText){
     if(t>0)o.taxable=String(Math.round(t*100)/100);
   }
 
-  // Supplier name — pehle company-keyword wali line, warna pehli clean line
+  // Supplier name — pehle "For, <Name>" signatory (seller), phir company-keyword line, warna pehli clean line
   var lines=text.split(/\n|\r/).map(function(l){return l.trim();}).filter(function(l){return l.length>2;});
-  var COMP=/\b(enterprises?|limited|ltd|pvt|llp|industr|traders?|trading|agenc(?:y|ies)|corp(?:oration)?|ventures?|udyog|steels?|carbon|associates?|sons|brothers|impex|exports?|imports?|marketing|distributors?|suppliers?|company|& co)\b/i;
-  var BAD=/bank|declaration|generated|jurisdiction|subject to|terms|condition|chargeable|computer/i;
+  var COMP=/\b(enterprises?|limited|ltd|pvt|llp|industr|traders?|trading|agenc(?:y|ies)|corp(?:oration)?|ventures?|udyog|steels?|carbon|associates?|sons|brothers|impex|exports?|imports?|marketing|distributors?|suppliers?|company|& co|foods?|marine|agro|mills?|overseas|sales|engineer(?:s|ing)?|motors?|oils?|cement|plastics?|packaging|textiles?|pharma|chemicals?|electric(?:al|als)?|hardware|global|international|buildcon|infra|builders?|logistics?|projects?|metalics?|metals?)\b/i;
+  var BAD=/bank|declaration|generated|jurisdiction|subject to|terms|condition|chargeable|computer|particulars|signator|purchaser|consignee|buyer|bill to|ship to/i;
   var pick='';
-  for(var li=0;li<lines.length&&li<14;li++){
-    var l=lines[li];
-    if(/^(irn|ack)\b|e-?invoice|gstin|tax\s*invoice/i.test(l))continue;
-    if(COMP.test(l)&&!BAD.test(l)){pick=l;break;}
+  // 1) "For, KALYANI BUILDCON PVT. LTD." jaisa signatory = seller (buyer prominent ho tab bhi sahi)
+  var fre=/\bfor[,:\-\s]+([^\n]{2,70})/ig,fm;
+  while((fm=fre.exec(text))!==null){
+    var cand=fm[1].split(/\s{2,}|\(|authoris|authorized|signator|e ?& ?o/i)[0].trim();
+    if(COMP.test(cand)&&!BAD.test(cand)){pick=cand;break;}
   }
+  // 2) company-keyword wali pehli line (purchaser/buyer block skip)
+  if(!pick){
+    for(var li=0;li<lines.length&&li<14;li++){
+      var l=lines[li];
+      if(/^(irn|ack)\b|e-?invoice|gstin|tax\s*invoice|purchaser|consignee|^buyer\b|bill to|ship to/i.test(l))continue;
+      if(COMP.test(l)&&!BAD.test(l)){pick=l;break;}
+    }
+  }
+  // 3) pehli clean line
   if(!pick){
     for(var lj=0;lj<lines.length&&lj<8;lj++){
       var l2=lines[lj];
@@ -3336,7 +3335,8 @@ function parseInvoice(rawText){
       pick=l2;break;
     }
   }
-  o.supplierName=(pick||'').replace(/\s{2,}/g,' ').substring(0,60);
+  pick=(pick||'').replace(/\s+(?:date[d]?\b|invoice\b|gstin\b|gst\s*no\b).*$/i,'').trim();
+  o.supplierName=pick.replace(/\s{2,}/g,' ').substring(0,60);
   return o;
 }
 
@@ -3373,9 +3373,8 @@ async function scanInvoices(){
   var keywords=getInvFilterKeywords();
   var aiEl=document.getElementById('invUseAI');
   var useAI=aiEl&&aiEl.checked;
-  var groqKey=(document.getElementById('invGroqKey')&&document.getElementById('invGroqKey').value.trim())||_loadGroqKey();
-  var groqModel=(document.getElementById('invGroqModel')&&document.getElementById('invGroqModel').value)||'llama-3.3-70b-versatile';
-  if(useAI&&!groqKey){showToast('AI mode: Vercel env var (GROQ_API_KEY) use hoga','info');}
+  var groqKey=''; // Always use server-side key (Render env var)
+  var groqModel='mistral-small-latest'; // Mistral model (Render env var: MISTRAL_API_KEY)
 
   var btn=document.getElementById('invScanBtn');if(btn){btn.disabled=true;btn.textContent='Scanning...';}
   var pw=document.getElementById('invScanProgress');if(pw)pw.classList.add('visible');
@@ -3383,13 +3382,54 @@ async function scanInvoices(){
   invoiceRows=[];
   var skipped=0,ocrUsed=0,blankSkipped=0,aiUsed=0,aiFail=0;
 
-  // text -> parsed object (AI agar on, warna regex). AI fail hone par regex fallback.
-  async function _parseOf(text,label){
+  // _isWeakResult: check karo regex result me important fields khaali hain
+  function _isWeakResult(r){
+    var filled=0;
+    if(r.invoiceNo)filled++;if(r.invoiceDate)filled++;if(r.supplierName)filled++;
+    if(r.supplierGstin)filled++;if(r.total)filled++;
+    return filled<2; // 2 se kam filled = weak
+  }
+
+  // text -> parsed object
+  // Strategy: pehle regex (teeno checkboxes ka faida uthata hai), 
+  // agar result weak ho aur AI on ho to AI se improve karo
+  async function _parseOf(text, label, fileBlob, fileName){
+    // Step 1: hamesha regex try karo (OCR text available hai to)
+    var regexResult = (text && text.replace(/\s+/g,'').length >= 15) ? parseInvoice(text) : null;
+
+    // Step 2: AI mode ON hai to decide karo
     if(useAI){
-      try{ if(aiUsed>0)await _invSleep(320); var r=await _invAIExtract(text,groqKey,groqModel); if(r){aiUsed++;return r;} }
-      catch(e){aiFail++;console.warn('AI extract fail, regex fallback:',e.message);}
+      var needsAI = !regexResult || _isWeakResult(regexResult);
+      if(needsAI){
+        try{
+          if(aiUsed>0)await _invSleep(500);
+          var r=await _invAIExtract(text, groqKey, groqModel, fileBlob, fileName);
+          if(r){aiUsed++;return r;}
+        }
+        catch(e){aiFail++;console.warn('AI extract fail, regex fallback:',e.message);}
+      } else {
+        // Regex ne achha result diya — AI se missing fields fill karo
+        try{
+          if(aiUsed>0)await _invSleep(500);
+          var aiR=await _invAIExtract(text, groqKey, groqModel, fileBlob, fileName);
+          if(aiR){
+            aiUsed++;
+            // Sirf khaali fields ko AI se fill karo
+            var merged=Object.assign({},regexResult);
+            var keys=['invoiceNo','invoiceDate','supplierName','supplierGstin','buyerGstin','taxable','cgst','sgst','igst','total'];
+            for(var k=0;k<keys.length;k++){
+              if(!merged[keys[k]] && aiR[keys[k]]) merged[keys[k]]=aiR[keys[k]];
+            }
+            return merged;
+          }
+        }
+        catch(e){/* AI merge fail — regex result use karo */}
+        return regexResult;
+      }
     }
-    return parseInvoice(text);
+
+    // AI off — regex result return karo
+    return regexResult || parseInvoice(text||'');
   }
 
   try{
@@ -3408,11 +3448,14 @@ async function scanInvoices(){
       var item=invFiles[fi];
       if(item.type==='image'){
         unitDone++;
-        setInvProg((useAI?'AI: ':'OCR: ')+item.name,Math.round(unitDone/totalUnits*92));
+        setInvProg((useAI?'AI+OCR: ':'OCR: ')+item.name,Math.round(unitDone/totalUnits*92));
         var imgText='';
+        // OCR checkbox on ho to hamesha chale (AI mode me bhi) — regex ko text milega
         if(useOCR){imgText=await _invExtractImage(item.file);if(imgText)ocrUsed++;}
+        // Blank skip: hamesha (AI ON ho ya OFF)
         if((imgText||'').replace(/\s+/g,'').length<15){blankSkipped++;continue;}
-        var pr1=await _parseOf(imgText,item.name);
+        if(useAI)setInvProg('AI extract: '+item.name,Math.round(unitDone/totalUnits*92));
+        var pr1=await _parseOf(imgText,item.name,item.file,item.name);
         _invPushRow(item.name,1,imgText,keywords,caseIns,partial,function(){skipped++;},pr1);
       }else{
         var pdoc=pdfDocs[fi];
@@ -3423,15 +3466,16 @@ async function scanInvoices(){
           setInvProg('Text scan: '+item.name+' (pg '+(p+1)+'/'+np+')',Math.round(unitDone/totalUnits*92));
           var pageText=await _invPdfLines(pdoc,p);
           var wasOCR=false;
+          // OCR: agar text nahi mila ya kam hai aur OCR checkbox on hai (AI mode me bhi)
           if((!pageText||pageText.replace(/\s+/g,'').length<15)&&useOCR){
             setInvProg('OCR: '+item.name+' (pg '+(p+1)+'/'+np+')',Math.round(unitDone/totalUnits*92));
             var imgData=await renderPageToDataURL(pdoc,p,1.8);
             if(imgData){var ot=await _invOCR(imgData);if(ot){pageText=ot;wasOCR=true;ocrUsed++;}}
           }
-          // truly blank page -> skip (koi junk row nahi)
+          // Blank skip: hamesha (AI ON ho ya OFF)
           if((pageText||'').replace(/\s+/g,'').length<15){blankSkipped++;continue;}
           if(useAI)setInvProg('AI extract: '+item.name+' (pg '+(p+1)+'/'+np+')',Math.round(unitDone/totalUnits*92));
-          var pr2=await _parseOf(pageText,item.name);
+          var pr2=await _parseOf(pageText,item.name,item.file,item.name);
           _invPushRow(item.name,p+1,pageText,keywords,caseIns,partial,function(){skipped++;},pr2);
         }
       }
@@ -3462,27 +3506,44 @@ function _invPushRow(fileName,pageNo,text,keywords,caseIns,partial,onSkip,prePar
 function _invSleep(ms){return new Promise(function(r){setTimeout(r,ms);});}
 function _invNum2(v){if(v===null||v===undefined)return '';v=String(v).replace(/[^0-9.\-]/g,'').replace(/(?!^)-/g,'').replace(/\.(?=.*\.)/g,'');return v==='-'?'':v;}
 function _loadGroqKey(){try{return localStorage.getItem('rmaGroqKey')||'';}catch(e){return '';}}
-function saveGroqKey(){var el=document.getElementById('invGroqKey');if(!el)return;try{if(el.value.trim())localStorage.setItem('rmaGroqKey',el.value.trim());else localStorage.removeItem('rmaGroqKey');showToast('Groq key saved (browser me)','success');}catch(e){}}
-function toggleInvAI(){var c=document.getElementById('invUseAI'),b=document.getElementById('invAIBox');if(!c||!b)return;b.style.display=c.checked?'block':'none';if(c.checked){var k=document.getElementById('invGroqKey');if(k&&!k.value)k.value=_loadGroqKey();}}
-async function _invAIExtract(text,key,model){
-  if(!text)return null;
-  var sys='You are an invoice data extraction engine for Indian GST tax invoices. Read the (possibly OCR-noisy) invoice text and return ONLY a single JSON object, no markdown fences, no commentary. Keys exactly: invoiceNo, invoiceDate, supplierName, supplierGstin, buyerGstin, taxable, cgst, sgst, igst, total. Rules: amounts must be plain numbers (no currency symbol, no commas, no "/-"), e.g. 96111 or 7330.5; use empty string "" when a field is not present; supplierGstin = the seller/issuer 15-char GSTIN, buyerGstin = the buyer/consignee GSTIN; supplierName = the seller firm name; taxable = total taxable value before tax; cgst, sgst, igst = total tax amounts (not the rate %); total = grand total / invoice total including taxes; keep invoiceDate exactly as printed.';
-  var body={model:model||'llama-3.3-70b-versatile',temperature:0,response_format:{type:'json_object'},messages:[{role:'system',content:sys},{role:'user',content:'INVOICE TEXT:\n'+String(text).slice(0,6000)}]};
-  var resp;
-  if(key){
-    // UI me key di hai -> seedhe Groq (local/testing ke liye)
-    resp=await fetch('https://api.groq.com/openai/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify(body)});
-  }else{
-    // UI khaali -> Vercel serverless proxy (server par GROQ_API_KEY env var use hoti hai)
-    resp=await fetch('/api/extract',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({payload:body})});
+function saveGroqKey(){var el=document.getElementById('invGroqKey');if(!el)return;try{if(el.value.trim())localStorage.setItem('rmaGroqKey',el.value.trim());else localStorage.removeItem('rmaGroqKey');showToast('Saved (browser me)','success');}catch(e){}}
+function _loadAIEndpoint(){try{return localStorage.getItem('rmaAIEndpoint')||'';}catch(e){return '';}}
+function saveAIEndpoint(){var el=document.getElementById('invAIEndpoint');if(!el)return;try{var v=el.value.trim();if(v)localStorage.setItem('rmaAIEndpoint',v);else localStorage.removeItem('rmaAIEndpoint');}catch(e){}}
+function toggleInvAI(){var c=document.getElementById('invUseAI'),b=document.getElementById('invAIBox');if(!c||!b)return;b.style.display=c.checked?'block':'none';if(c.checked){var k=document.getElementById('invGroqKey');if(k&&!k.value)k.value=_loadGroqKey();var e=document.getElementById('invAIEndpoint');if(e&&!e.value)e.value=_loadAIEndpoint();}}
+// _invAIExtract: sends actual file to invoice-api-server (Render) via multipart FormData
+// server.js expects: POST /api/extract  multipart  fields: files[] + prompt
+async function _invAIExtract(text, key, model, fileBlob, fileName) {
+  if (!fileBlob) return null;
+  var prompt = 'Extract Indian GST invoice data. Return one JSON object per invoice with these exact keys: invoiceNo, invoiceDate, supplierName, supplierGstin, buyerGstin, taxable, cgst, sgst, igst, total. Rules: amounts as plain numbers (no currency symbol, no commas), empty string if not present, supplierGstin = seller 15-char GSTIN, buyerGstin = buyer GSTIN, taxable = total taxable value before tax, cgst/sgst/igst = total tax amounts not rate percent, total = grand total including taxes, invoiceDate exactly as printed.';
+  var ep = 'https://invoice-api-server.onrender.com/api/extract';
+  var fd = new FormData();
+  fd.append('files', fileBlob, fileName || 'invoice');
+  fd.append('prompt', prompt);
+  var resp = await fetch(ep, { method: 'POST', body: fd });
+  if (!resp.ok) { var t = ''; try { t = (await resp.json()).error || ''; } catch(e) {} throw new Error(resp.status + (t ? ': ' + t : '')); }
+  var data = await resp.json();
+  var rows = data.data || [];
+  if (!rows.length) return null;
+  var r = rows[0];
+  function g(obj, candidates) {
+    for (var i = 0; i < candidates.length; i++) {
+      for (var k in obj) { if (k.toLowerCase().replace(/[^a-z0-9]/g,'').indexOf(candidates[i]) !== -1) return String(obj[k] || ''); }
+    }
+    return '';
   }
-  if(!resp.ok){var t='';try{t=(await resp.json()).error.message;}catch(e){}throw new Error((resp.status===429?'rate limit ':'')+resp.status+(t?': '+t:''));}
-  var data=await resp.json();
-  var content=(data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content)||'';
-  var obj=JSON.parse(content.replace(/```json|```/g,'').trim());
-  return {invoiceNo:String(obj.invoiceNo||''),invoiceDate:String(obj.invoiceDate||''),supplierName:String(obj.supplierName||''),supplierGstin:String(obj.supplierGstin||'').toUpperCase(),buyerGstin:String(obj.buyerGstin||'').toUpperCase(),taxable:_invNum2(obj.taxable),cgst:_invNum2(obj.cgst),sgst:_invNum2(obj.sgst),igst:_invNum2(obj.igst),total:_invNum2(obj.total)};
+  return {
+    invoiceNo:    g(r, ['invoiceno','invoice#','invno','billno']),
+    invoiceDate:  g(r, ['invoicedate','invoicedt','date']),
+    supplierName: g(r, ['suppliername','vendorname','sellername','partyname','supplier','vendor','seller']),
+    supplierGstin: g(r, ['suppliergstin','sellergstin','gstin']).toUpperCase(),
+    buyerGstin:   g(r, ['buyergstin','consigneegstin','billedtogstin','buyergstin']).toUpperCase(),
+    taxable:      _invNum2(g(r, ['taxablevalue','taxable','assessable','basic'])),
+    cgst:         _invNum2(g(r, ['cgst'])),
+    sgst:         _invNum2(g(r, ['sgst'])),
+    igst:         _invNum2(g(r, ['igst'])),
+    total:        _invNum2(g(r, ['grandtotal','invoicetotal','total','amountpayable']))
+  };
 }
-
 function addBlankInvoiceRow(){
   invoiceRows.push({file:'(manual)',page:'',invoiceNo:'',invoiceDate:'',supplierName:'',supplierGstin:'',buyerGstin:'',taxable:'',cgst:'',sgst:'',igst:'',total:''});
   renderInvoiceTable();
