@@ -3382,18 +3382,54 @@ async function scanInvoices(){
   invoiceRows=[];
   var skipped=0,ocrUsed=0,blankSkipped=0,aiUsed=0,aiFail=0;
 
-  // text -> parsed object (AI agar on, warna regex). AI fail hone par regex fallback.
-  // fileBlob + fileName: actual file passed to Render server (Mistral Vision)
+  // _isWeakResult: check karo regex result me important fields khaali hain
+  function _isWeakResult(r){
+    var filled=0;
+    if(r.invoiceNo)filled++;if(r.invoiceDate)filled++;if(r.supplierName)filled++;
+    if(r.supplierGstin)filled++;if(r.total)filled++;
+    return filled<2; // 2 se kam filled = weak
+  }
+
+  // text -> parsed object
+  // Strategy: pehle regex (teeno checkboxes ka faida uthata hai), 
+  // agar result weak ho aur AI on ho to AI se improve karo
   async function _parseOf(text, label, fileBlob, fileName){
+    // Step 1: hamesha regex try karo (OCR text available hai to)
+    var regexResult = (text && text.replace(/\s+/g,'').length >= 15) ? parseInvoice(text) : null;
+
+    // Step 2: AI mode ON hai to decide karo
     if(useAI){
-      try{
-        if(aiUsed>0)await _invSleep(500);
-        var r=await _invAIExtract(text, groqKey, groqModel, fileBlob, fileName);
-        if(r){aiUsed++;return r;}
+      var needsAI = !regexResult || _isWeakResult(regexResult);
+      if(needsAI){
+        try{
+          if(aiUsed>0)await _invSleep(500);
+          var r=await _invAIExtract(text, groqKey, groqModel, fileBlob, fileName);
+          if(r){aiUsed++;return r;}
+        }
+        catch(e){aiFail++;console.warn('AI extract fail, regex fallback:',e.message);}
+      } else {
+        // Regex ne achha result diya — AI se missing fields fill karo
+        try{
+          if(aiUsed>0)await _invSleep(500);
+          var aiR=await _invAIExtract(text, groqKey, groqModel, fileBlob, fileName);
+          if(aiR){
+            aiUsed++;
+            // Sirf khaali fields ko AI se fill karo
+            var merged=Object.assign({},regexResult);
+            var keys=['invoiceNo','invoiceDate','supplierName','supplierGstin','buyerGstin','taxable','cgst','sgst','igst','total'];
+            for(var k=0;k<keys.length;k++){
+              if(!merged[keys[k]] && aiR[keys[k]]) merged[keys[k]]=aiR[keys[k]];
+            }
+            return merged;
+          }
+        }
+        catch(e){/* AI merge fail — regex result use karo */}
+        return regexResult;
       }
-      catch(e){aiFail++;console.warn('AI extract fail, regex fallback:',e.message);}
     }
-    return parseInvoice(text);
+
+    // AI off — regex result return karo
+    return regexResult || parseInvoice(text||'');
   }
 
   try{
@@ -3412,11 +3448,13 @@ async function scanInvoices(){
       var item=invFiles[fi];
       if(item.type==='image'){
         unitDone++;
-        setInvProg((useAI?'AI: ':'OCR: ')+item.name,Math.round(unitDone/totalUnits*92));
+        setInvProg((useAI?'AI+OCR: ':'OCR: ')+item.name,Math.round(unitDone/totalUnits*92));
         var imgText='';
-        // AI mode me OCR skip — file seedha server ko jaayegi (blank check bypass)
-        if(!useAI && useOCR){imgText=await _invExtractImage(item.file);if(imgText)ocrUsed++;}
-        if(!useAI && (imgText||'').replace(/\s+/g,'').length<15){blankSkipped++;continue;}
+        // OCR checkbox on ho to hamesha chale (AI mode me bhi) — regex ko text milega
+        if(useOCR){imgText=await _invExtractImage(item.file);if(imgText)ocrUsed++;}
+        // Blank skip: hamesha (AI ON ho ya OFF)
+        if((imgText||'').replace(/\s+/g,'').length<15){blankSkipped++;continue;}
+        if(useAI)setInvProg('AI extract: '+item.name,Math.round(unitDone/totalUnits*92));
         var pr1=await _parseOf(imgText,item.name,item.file,item.name);
         _invPushRow(item.name,1,imgText,keywords,caseIns,partial,function(){skipped++;},pr1);
       }else{
@@ -3428,13 +3466,14 @@ async function scanInvoices(){
           setInvProg('Text scan: '+item.name+' (pg '+(p+1)+'/'+np+')',Math.round(unitDone/totalUnits*92));
           var pageText=await _invPdfLines(pdoc,p);
           var wasOCR=false;
+          // OCR: agar text nahi mila ya kam hai aur OCR checkbox on hai (AI mode me bhi)
           if((!pageText||pageText.replace(/\s+/g,'').length<15)&&useOCR){
             setInvProg('OCR: '+item.name+' (pg '+(p+1)+'/'+np+')',Math.round(unitDone/totalUnits*92));
             var imgData=await renderPageToDataURL(pdoc,p,1.8);
             if(imgData){var ot=await _invOCR(imgData);if(ot){pageText=ot;wasOCR=true;ocrUsed++;}}
           }
-          // truly blank page -> skip (AI mode me file seedha server ko jaati hai, skip nahi)
-          if(!useAI && (pageText||'').replace(/\s+/g,'').length<15){blankSkipped++;continue;}
+          // Blank skip: hamesha (AI ON ho ya OFF)
+          if((pageText||'').replace(/\s+/g,'').length<15){blankSkipped++;continue;}
           if(useAI)setInvProg('AI extract: '+item.name+' (pg '+(p+1)+'/'+np+')',Math.round(unitDone/totalUnits*92));
           var pr2=await _parseOf(pageText,item.name,item.file,item.name);
           _invPushRow(item.name,p+1,pageText,keywords,caseIns,partial,function(){skipped++;},pr2);
