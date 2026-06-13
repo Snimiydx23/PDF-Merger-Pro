@@ -3473,12 +3473,13 @@ async function scanInvoices(){
       var item=invFiles[fi];
       if(item.type==='image'){
         unitDone++;
-        setInvProg((useAI?'AI+OCR: ':'OCR: ')+item.name,Math.round(unitDone/totalUnits*92));
+        setInvProg((useAI?'AI: ':'OCR: ')+item.name,Math.round(unitDone/totalUnits*92));
         var imgText='';
-        // OCR checkbox on ho to hamesha chale (AI mode me bhi) — regex ko text milega
+        // OCR checkbox on ho to text extract karo (regex ke liye)
         if(useOCR){imgText=await _invExtractImage(item.file);if(imgText)ocrUsed++;}
-        // Blank skip: hamesha (AI ON ho ya OFF)
-        if((imgText||'').replace(/\s+/g,'').length<15){blankSkipped++;continue;}
+        // AI mode ON hai to blank check bypass — file seedha server ko jaayegi (Mistral Vision)
+        // AI mode OFF hai to blank skip karo
+        if(!useAI && (imgText||'').replace(/\s+/g,'').length<15){blankSkipped++;continue;}
         if(useAI)setInvProg('AI extract: '+item.name,Math.round(unitDone/totalUnits*92));
         var pr1=await _parseOf(imgText,item.name,item.file,item.name);
         _invPushRow(item.name,1,imgText,keywords,caseIns,partial,function(){skipped++;},pr1);
