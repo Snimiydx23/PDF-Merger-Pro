@@ -510,36 +510,36 @@ table.scan-tbl tr:nth-child(even) td{background:var(--opt-bg);}
   </div>
 
   <!-- COMPRESS -->
-  <div class="tool-panel" id="panel-compress">
-    <div class="panel-header red"><h2>🗜️ Compress PDF</h2><p>Pages ko JPEG re-encode karke real size reduction</p></div>
-    <div class="panel-body">
-      <div class="drop-zone" id="compressDropZone" ondragover="handleDragOver(event,'compressDropZone')" ondragleave="handleDragLeave(event,'compressDropZone')" ondrop="handleFileDrop(event,'compress')">
-        <span class="dz-icon">📁</span><h3>Drop a PDF file here</h3><p>Scanned ya text-based dono kaam karta hai</p>
-        <button class="btn-select" onclick="document.getElementById('compressFileInput').click()">Select PDF File</button>
-        <input type="file" id="compressFileInput" accept=".pdf" onchange="addSingleFile(event,'compress')">
-      </div>
-      <div id="compressFileList" class="file-list"></div>
-      <div id="compressOptions" class="options-panel" style="display:none;">
-        <div class="options-title">⚙️ Compression Settings</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:4px;">
-          <div>
-            <label style="font-size:12px;font-weight:600;color:var(--muted);">JPEG QUALITY: <strong id="qualityLabel">75%</strong></label>
-            <input type="range" id="compressQuality" min="30" max="95" value="75" step="5" style="width:100%;margin-top:5px;accent-color:var(--red);" oninput="document.getElementById('qualityLabel').textContent=this.value+'%'">
-          </div>
-          <div>
-            <label style="font-size:12px;font-weight:600;color:var(--muted);">RENDER SCALE: <strong id="scaleLabel">1.2x</strong></label>
-            <input type="range" id="compressScale" min="0.6" max="2.0" value="1.2" step="0.1" style="width:100%;margin-top:5px;accent-color:var(--red);" oninput="document.getElementById('scaleLabel').textContent=parseFloat(this.value).toFixed(1)+'x'">
-          </div>
+<div class="tool-panel" id="panel-compress">
+  <div class="panel-header red"><h2>🗜️ Compress PDF</h2><p>Pages ko JPEG re-encode karke real size reduction</p></div>
+  <div class="panel-body">
+    <div class="drop-zone" id="compressDropZone" ondragover="handleDragOver(event,'compressDropZone')" ondragleave="handleDragLeave(event,'compressDropZone')" ondrop="handleFileDrop(event,'compress')">
+      <span class="dz-icon">📁</span><h3>Drop PDF file(s) here</h3><p>Scanned ya text-based dono kaam karta hai — multiple files bhi le sakte hain</p>
+      <button class="btn-select" onclick="document.getElementById('compressFileInput').click()">📁 Select PDF File(s)</button>
+      <input type="file" id="compressFileInput" accept=".pdf" multiple onchange="addCompressFiles(event)">
+    </div>
+    <div id="compressFileList" class="file-list"></div>
+    <div id="compressOptions" class="options-panel" style="display:none;">
+      <div class="options-title">⚙️ Compression Settings</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:4px;">
+        <div>
+          <label style="font-size:12px;font-weight:600;color:var(--muted);">JPEG QUALITY: <strong id="qualityLabel">75%</strong></label>
+          <input type="range" id="compressQuality" min="30" max="95" value="75" step="5" style="width:100%;margin-top:5px;accent-color:var(--red);" oninput="document.getElementById('qualityLabel').textContent=this.value+'%'">
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:600;color:var(--muted);">RENDER SCALE: <strong id="scaleLabel">1.2x</strong></label>
+          <input type="range" id="compressScale" min="0.6" max="2.0" value="1.2" step="0.1" style="width:100%;margin-top:5px;accent-color:var(--red);" oninput="document.getElementById('scaleLabel').textContent=parseFloat(this.value).toFixed(1)+'x'">
         </div>
       </div>
-      <div class="action-row">
-        <button class="btn-clear" onclick="clearSingleTool('compress')">🗑 Clear</button>
-        <button class="btn-main" id="compressBtn" onclick="compressPDF()" disabled>🗜️ Compress PDF</button>
-      </div>
-      <div class="progress-wrap" id="compressProgress"><div class="progress-status" id="compressProgressStatus"></div><div class="progress-bar-bg"><div class="progress-bar-fill" id="compressProgressFill"></div></div></div>
-      <div class="result-box" id="compressResult"><h4>✅ Done!</h4><p id="compressResultInfo"></p><div id="compressDownloadBtns"></div></div>
     </div>
+    <div class="action-row">
+      <button class="btn-clear" onclick="clearCompressAll()">🗑 Clear</button>
+      <button class="btn-main" id="compressBtn" onclick="compressPDF()" disabled>🗜️ Compress PDF(s)</button>
+    </div>
+    <div class="progress-wrap" id="compressProgress"><div class="progress-status" id="compressProgressStatus"></div><div class="progress-bar-bg"><div class="progress-bar-fill" id="compressProgressFill"></div></div></div>
+    <div class="result-box" id="compressResult"><h4>✅ Done!</h4><p id="compressResultInfo"></p><div id="compressDownloadBtns"></div></div>
   </div>
+</div>
 
   <!-- SPLIT BY CLIENT -->
   <div class="tool-panel" id="panel-split-client">
@@ -1601,6 +1601,7 @@ table.scan-tbl tr:nth-child(even) td{background:var(--opt-bg);}
 // =====================================================================
 var mergeItems=[];
 var singleFiles={};
+var compressFiles=[];
 var splitRanges=[];
 var splitTotalPages=0;
 var companySubfolders=[];
@@ -1721,7 +1722,8 @@ function handleFileDrop(e,tool){
   var files=Array.from(e.dataTransfer.files).filter(function(f){return f.name.toLowerCase().endsWith('.pdf');});
   if(!files.length){showToast('PDF files drop karein','error');return;}
   if(tool==='merge')files.forEach(function(f){addMergeItem({type:'file',file:f,name:f.name,size:f.size});});
-  else setSingleFile(tool,files[0]);
+else if(tool==='compress')files.forEach(function(f){addCompressItem(f);});
+else setSingleFile(tool,files[0]);
 }
 function handleImgDrop(e){
   e.preventDefault();var el=document.getElementById('jpgDropZone');if(el)el.classList.remove('dragover');
@@ -1976,26 +1978,74 @@ async function splitSinglePages(){
 }
 
 // =====================================================================
-// COMPRESS
+// COMPRESS (multi-file)
 // =====================================================================
+function addCompressFiles(e){Array.from(e.target.files).forEach(function(f){addCompressItem(f);});e.target.value='';}
+function addCompressItem(file){
+  if(compressFiles.find(function(x){return x.name===file.name&&x.size===file.size;}))return;
+  compressFiles.push(file);renderCompressList();
+  var co=document.getElementById('compressOptions');if(co)co.style.display='block';
+  var cb=document.getElementById('compressBtn');if(cb)cb.disabled=false;
+  hideResult('compress');
+}
+function removeCompressItem(i){
+  compressFiles.splice(i,1);renderCompressList();
+  if(!compressFiles.length){var co=document.getElementById('compressOptions');if(co)co.style.display='none';var cb=document.getElementById('compressBtn');if(cb)cb.disabled=true;}
+  hideResult('compress');
+}
+function clearCompressAll(){
+  compressFiles.length=0;renderCompressList();
+  var co=document.getElementById('compressOptions');if(co)co.style.display='none';
+  var cb=document.getElementById('compressBtn');if(cb)cb.disabled=true;
+  hideResult('compress');
+}
+function renderCompressList(){
+  var list=document.getElementById('compressFileList');if(!list)return;
+  if(!compressFiles.length){list.innerHTML='';return;}
+  list.innerHTML=compressFiles.map(function(file,i){
+    var thumbId='cthumb-'+i+'-'+Date.now();
+    setTimeout(function(tid,f){setThumbInItem(tid,f);},0,thumbId,file);
+    return '<div class="file-item newly-added" id="citem-'+i+'"><span class="drag-handle" style="cursor:default;color:var(--border)">⠿</span><div class="file-thumb" id="'+thumbId+'"><span class="thumb-loading">⏳</span></div><div class="file-info"><div class="file-name">'+escH(file.name)+'</div><div class="file-meta">'+(file.size/1024/1024).toFixed(2)+' MB</div></div><div class="file-actions"><button class="btn-icon" onclick="removeCompressItem('+i+')">✕</button></div></div>';
+  }).join('');
+}
+async function compressOnePdf(file,jpegQ,scale,onProgress){
+  var buf=await file.arrayBuffer();var origSize=buf.byteLength;
+  var pdfJsDoc=null;try{var loadTask=pdfjsLib.getDocument({data:new Uint8Array(buf.slice(0))});pdfJsDoc=await loadTask.promise;}catch(e){throw new Error(file.name+': PDF load failed');}
+  var totalPages=pdfJsDoc.numPages;var outDoc=await PDFLib.PDFDocument.create();var srcDocOnce=null;try{srcDocOnce=await PDFLib.PDFDocument.load(buf.slice(0),{ignoreEncryption:true});}catch(e){}
+  for(var i=0;i<totalPages;i++){
+    if(onProgress)onProgress(i+1,totalPages);
+    try{var page=await pdfJsDoc.getPage(i+1);var vp=page.getViewport({scale:scale});var canvas=document.createElement('canvas');canvas.width=Math.floor(vp.width);canvas.height=Math.floor(vp.height);var ctx=canvas.getContext('2d',{willReadFrequently:true});ctx.fillStyle='#ffffff';ctx.fillRect(0,0,canvas.width,canvas.height);await page.render({canvasContext:ctx,viewport:vp}).promise;var dataUrl=canvas.toDataURL('image/jpeg',jpegQ);var b64=dataUrl.split(',')[1];var binary=atob(b64);var jpegBytes=new Uint8Array(binary.length);for(var j=0;j<binary.length;j++)jpegBytes[j]=binary.charCodeAt(j);var jpegImg=await outDoc.embedJpg(jpegBytes);var origPageSize={width:612,height:792};if(srcDocOnce&&i<srcDocOnce.getPageCount()){var op=srcDocOnce.getPage(i);origPageSize=op.getSize();}var newPage=outDoc.addPage([origPageSize.width,origPageSize.height]);newPage.drawImage(jpegImg,{x:0,y:0,width:origPageSize.width,height:origPageSize.height});}
+    catch(pageErr){if(srcDocOnce&&i<srcDocOnce.getPageCount()){try{var cp2=await outDoc.copyPages(srcDocOnce,[i]);outDoc.addPage(cp2[0]);}catch(e2){}}}
+  }
+  var outBytes=await outDoc.save({useObjectStreams:true});var newSize=outBytes.length;
+  var blob=new Blob([outBytes],{type:'application/pdf'});var outName=file.name.replace(/\.pdf$/i,'')+'_compressed.pdf';
+  return {blob:blob,name:outName,origSize:origSize,newSize:newSize};
+}
 async function compressPDF(){
-  var file=singleFiles['compress'];if(!file)return;
+  if(!compressFiles.length)return;
   var btn=document.getElementById('compressBtn');if(btn){btn.disabled=true;btn.textContent='Compressing...';}
+  var jpegQ=(parseFloat(document.getElementById('compressQuality').value)||75)/100;var scale=parseFloat(document.getElementById('compressScale').value)||1.2;
+  var blobs=[],names=[],totalOrig=0,totalNew=0,failCount=0;
   try{
-    showProg('compress','Loading PDF...',5);var buf=await file.arrayBuffer();var origSize=buf.byteLength;var jpegQ=(parseFloat(document.getElementById('compressQuality').value)||75)/100;var scale=parseFloat(document.getElementById('compressScale').value)||1.2;
-    var pdfJsDoc=null;try{var loadTask=pdfjsLib.getDocument({data:new Uint8Array(buf.slice(0))});pdfJsDoc=await loadTask.promise;}catch(e){showToast('PDF load failed','error');hideProg('compress');if(btn){btn.disabled=false;btn.textContent='🗜️ Compress PDF';}return;}
-    var totalPages=pdfJsDoc.numPages;var outDoc=await PDFLib.PDFDocument.create();var srcDocOnce=null;try{srcDocOnce=await PDFLib.PDFDocument.load(buf.slice(0),{ignoreEncryption:true});}catch(e){}
-    for(var i=0;i<totalPages;i++){
-      showProg('compress','Compressing page '+(i+1)+'/'+totalPages+'...',10+Math.round((i/totalPages)*85));
-      try{var page=await pdfJsDoc.getPage(i+1);var vp=page.getViewport({scale:scale});var canvas=document.createElement('canvas');canvas.width=Math.floor(vp.width);canvas.height=Math.floor(vp.height);var ctx=canvas.getContext('2d',{willReadFrequently:true});ctx.fillStyle='#ffffff';ctx.fillRect(0,0,canvas.width,canvas.height);await page.render({canvasContext:ctx,viewport:vp}).promise;var dataUrl=canvas.toDataURL('image/jpeg',jpegQ);var b64=dataUrl.split(',')[1];var binary=atob(b64);var jpegBytes=new Uint8Array(binary.length);for(var j=0;j<binary.length;j++)jpegBytes[j]=binary.charCodeAt(j);var jpegImg=await outDoc.embedJpg(jpegBytes);var origPageSize={width:612,height:792};if(srcDocOnce&&i<srcDocOnce.getPageCount()){var op=srcDocOnce.getPage(i);origPageSize=op.getSize();}var newPage=outDoc.addPage([origPageSize.width,origPageSize.height]);newPage.drawImage(jpegImg,{x:0,y:0,width:origPageSize.width,height:origPageSize.height});}
-      catch(pageErr){if(srcDocOnce&&i<srcDocOnce.getPageCount()){try{var cp2=await outDoc.copyPages(srcDocOnce,[i]);outDoc.addPage(cp2[0]);}catch(e2){}}}
+    for(var fi=0;fi<compressFiles.length;fi++){
+      var f=compressFiles[fi];
+      showProg('compress','File '+(fi+1)+'/'+compressFiles.length+': '+f.name,Math.round((fi/compressFiles.length)*100));
+      try{
+        var res=await compressOnePdf(f,jpegQ,scale,function(pg,total){
+          var base=Math.round((fi/compressFiles.length)*100);var span=Math.round((1/compressFiles.length)*100);
+          showProg('compress','File '+(fi+1)+'/'+compressFiles.length+' — page '+pg+'/'+total+'...',base+Math.round((pg/total)*span));
+        });
+        blobs.push(res.blob);names.push(res.name);totalOrig+=res.origSize;totalNew+=res.newSize;
+      }catch(fileErr){failCount++;showToast(fileErr.message||('Failed: '+f.name),'error');console.error(fileErr);}
     }
-    showProg('compress','Saving...',97);var outBytes=await outDoc.save({useObjectStreams:true});var newSize=outBytes.length;var pct=((origSize-newSize)/origSize*100).toFixed(1);showProg('compress','Done!',100);
-    var blob=new Blob([outBytes],{type:'application/pdf'});var outName=file.name.replace('.pdf','_compressed.pdf');
-    showResult('compress',(origSize/1024/1024).toFixed(2)+' MB → '+(newSize/1024/1024).toFixed(2)+' MB ('+(pct>0?'-'+pct+'% reduced':'size increased')+')',[blob],[outName]);
-    showToast(pct>0?'Compressed by '+pct+'%! ✅':'Try lower quality','success');
+    if(!blobs.length){hideProg('compress');showToast('Koi file compress nahi ho payi','error');if(btn){btn.disabled=false;btn.textContent='🗜️ Compress PDF(s)';}return;}
+    showProg('compress','Done!',100);
+    var pct=((totalOrig-totalNew)/totalOrig*100).toFixed(1);
+    var info=blobs.length+' file(s) — '+(totalOrig/1024/1024).toFixed(2)+' MB → '+(totalNew/1024/1024).toFixed(2)+' MB ('+(pct>0?'-'+pct+'% reduced':'size increased')+')'+(failCount?' — '+failCount+' failed':'');
+    showResult('compress',info,blobs,names);
+    showToast(pct>0?blobs.length+' file(s) compressed by '+pct+'%! ✅':'Try lower quality','success');
   }catch(e){hideProg('compress');showToast('Failed: '+e.message,'error');console.error(e);}
-  if(btn){btn.disabled=false;btn.textContent='🗜️ Compress PDF';}
+  if(btn){btn.disabled=false;btn.textContent='🗜️ Compress PDF(s)';}
 }
 
 // =====================================================================
@@ -3677,7 +3727,7 @@ function exportInvoiceExcel(){
    'handleFileDrop','handleImgDrop','handleCmpDrop','addMergeFiles','setCompanyRootFolder',
    'addSelectedCompany','addAllCompanies','clearMerge','mergePDFs','updateIndexPreview',
    'addSingleFile','clearSingleTool','splitBySize','splitByPages','splitSinglePages',
-   'compressPDF','convertPDFToJPG','addImagesFromGalleryConvert','clearImgConvert',
+   'compressPDF','addCompressFiles','clearCompressAll','convertPDFToJPG','addImagesFromGalleryConvert','clearImgConvert',
    'addImagesToConvert','convertImagesToPDF','convertToPDFA','setRotAngle','setRotPages',
    'rotatePDF','setPNPos','addPageNumbers','updateWMPreview','addWatermark','cropPDF',
    'editPDFMeta','unlockPDF','protectPDF','initSignCanvas','clearSignCanvas','saveSignature',
