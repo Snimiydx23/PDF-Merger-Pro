@@ -1327,11 +1327,7 @@ table.scan-tbl tr:nth-child(even) td{background:var(--opt-bg);}
         <input type="file" id="aiInput" accept=".pdf" onchange="addSingleFile(event,'ai-summarizer')">
       </div>
       <div id="ai-summarizerFileList" class="file-list"></div>
-      <div class="options-panel" style="display:block;margin-top:12px;">
-        <div class="options-title">🔑 Anthropic API Key</div>
-        <input type="password" class="opt-input" id="aiApiKey" placeholder="sk-ant-api03-... yahan enter karein" autocomplete="off">
-        <div style="font-size:11px;color:var(--muted);margin-top:4px;">API key: <a href="https://console.anthropic.com/account/keys" target="_blank" style="color:var(--blue)">console.anthropic.com</a> se milegi — browser mein safe, server par nahi jaati.</div>
-      </div>
+      <div class="info-box">🚀 Powered by NVIDIA Nemotron — API key server par securely set hai, browser mein kuch enter karne ki zarurat nahi.</div>
       <div id="aiOptions" class="options-panel" style="display:none;">
         <div class="options-title">🤖 Analysis Type</div>
         <div class="options-grid">
@@ -1371,9 +1367,7 @@ table.scan-tbl tr:nth-child(even) td{background:var(--opt-bg);}
       </div>
       <div id="translate-pdfFileList" class="file-list"></div>
       <div class="options-panel" style="display:block;margin-top:12px;">
-        <div class="options-title">🔑 Anthropic API Key</div>
-        <input type="password" class="opt-input" id="transApiKey" placeholder="sk-ant-api03-... yahan enter karein" autocomplete="off">
-        <div style="font-size:11px;color:var(--muted);margin-top:4px;">API key: <a href="https://console.anthropic.com/account/keys" target="_blank" style="color:var(--blue)">console.anthropic.com</a> se milegi — browser mein safe.</div>
+        <div class="info-box" style="margin:0;">🚀 Powered by NVIDIA Nemotron — API key server par securely set hai, browser mein kuch enter karne ki zarurat nahi.</div>
       </div>
       <div id="transOptions" class="options-panel" style="display:none;">
         <div class="options-title">🌐 Translation Settings</div>
@@ -2390,10 +2384,9 @@ async function runAISummarizer(){
     else if(mode==='translate')prompt='Translate the following document text to Hindi. Maintain the original structure and meaning:\n\n'+allText.substring(0,6000);
     else{var q=document.getElementById('aiQuestion').value||'What is this document about?';prompt='Based on this document, answer the following question:\n\nQuestion: '+q+'\n\nDocument text:\n'+allText.substring(0,8000);}
     showProg('ai-summarizer','Sending to AI...',55);
-    var apiKey=document.getElementById('aiApiKey').value.trim();if(!apiKey){showToast('API Key enter karein pehle!','error');hideProg('ai-summarizer');if(btn){btn.disabled=false;btn.textContent='🤖 Analyze PDF';}return;}
-    var response=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','anthropic-version':'2023-06-01','x-api-key':apiKey,'anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:prompt}]})});
+    var response=await fetch('https://pdf-pro-server.onrender.com/ai/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt:prompt,max_tokens:1000})});
     var data=await response.json();showProg('ai-summarizer','Done!',100);
-    var resultText=data.content&&data.content[0]?data.content[0].text:(data.error?'Error: '+data.error.message:'No response received.');
+    var resultText=data.text?data.text:(data.error?'Error: '+data.error:'No response received.');
     if(aiRB)aiRB.style.display='block';var rt=document.getElementById('aiResponseText');if(rt)rt.textContent=resultText;
     showToast('Analysis complete! ✅','success');setTimeout(function(){hideProg('ai-summarizer');},800);
   }catch(e){hideProg('ai-summarizer');showToast('Failed: '+e.message,'error');console.error(e);}
@@ -2418,10 +2411,9 @@ async function translatePDF(){
     var lang=document.getElementById('transLang').value||'Hindi';
     var prompt='Translate the following document text to '+lang+'. Keep the structure and page markers intact:\n\n'+allText.substring(0,6000);
     showProg('translate-pdf','Translating with AI...',60);
-    var transKey=document.getElementById('transApiKey').value.trim();if(!transKey){showToast('API Key enter karein pehle!','error');hideProg('translate-pdf');if(btn){btn.disabled=false;btn.textContent='🌐 Translate PDF';}return;}
-    var response=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','anthropic-version':'2023-06-01','x-api-key':transKey,'anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:prompt}]})});
+    var response=await fetch('https://pdf-pro-server.onrender.com/ai/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt:prompt,max_tokens:1000})});
     var data=await response.json();showProg('translate-pdf','Done!',100);
-    var resultText=data.content&&data.content[0]?data.content[0].text:(data.error?'Error: '+data.error.message:'No response received.');
+    var resultText=data.text?data.text:(data.error?'Error: '+data.error:'No response received.');
     if(transRB)transRB.style.display='block';var rt=document.getElementById('transResponseText');if(rt)rt.textContent=resultText;
     showToast('Translation complete! ✅','success');setTimeout(function(){hideProg('translate-pdf');},800);
   }catch(e){hideProg('translate-pdf');showToast('Failed: '+e.message,'error');console.error(e);}
