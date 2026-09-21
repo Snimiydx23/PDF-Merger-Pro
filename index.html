@@ -2375,9 +2375,20 @@ async function runAISummarizer(){
   try{
     showProg('ai-summarizer','Extracting text from PDF...',10);var buf=await file.arrayBuffer();var maxPages=parseInt(document.getElementById('aiMaxPages').value)||10;
     var pdfJsDoc=null;try{var lt=pdfjsLib.getDocument({data:new Uint8Array(buf)});pdfJsDoc=await lt.promise;}catch(e){showToast('PDF load failed','error');hideProg('ai-summarizer');if(btn){btn.disabled=false;btn.textContent='🤖 Analyze PDF';}return;}
-    var totalPages=Math.min(pdfJsDoc.numPages,maxPages);var allText='';
-    for(var i=0;i<totalPages;i++){showProg('ai-summarizer','Extracting page '+(i+1)+'/'+totalPages+'...',10+Math.round(i/totalPages*35));try{var page=await pdfJsDoc.getPage(i+1);var tc=await page.getTextContent();allText+='[Page '+(i+1)+']\n'+tc.items.map(function(it){return it.str;}).join(' ')+'\n\n';}catch(e){}}
+    var totalPages=Math.min(pdfJsDoc.numPages,maxPages);var allText='';var ocrUsed=false;
+    for(var i=0;i<totalPages;i++){
+      showProg('ai-summarizer','Extracting page '+(i+1)+'/'+totalPages+'...',10+Math.round(i/totalPages*35));
+      var pageText='';
+      try{var page=await pdfJsDoc.getPage(i+1);var tc=await page.getTextContent();pageText=tc.items.map(function(it){return it.str;}).join(' ').trim();}catch(e){}
+      if(pageText.length<15){
+        showProg('ai-summarizer','Page '+(i+1)+' scanned lagta hai, OCR kar rahe hain...',10+Math.round(i/totalPages*35));
+        try{var imgData=await renderPageToDataURL(pdfJsDoc,i,1.6);if(imgData){pageText=await runOCR(imgData);ocrUsed=true;}}catch(e){}
+      }
+      allText+='[Page '+(i+1)+']\n'+pageText+'\n\n';
+    }
+    try{await terminateOCRWorker();}catch(e){}
     if(!allText.trim()){showToast('PDF mein text nahi mila (scanned PDF hai?)','error');hideProg('ai-summarizer');if(btn){btn.disabled=false;btn.textContent='🤖 Analyze PDF';}return;}
+    if(ocrUsed)showToast('Scanned pages OCR se padhe gaye ✅','success');
     var modeEl=document.querySelector('input[name="aiMode"]:checked');var mode=modeEl?modeEl.value:'summary';var prompt;
     if(mode==='summary')prompt='Please provide a comprehensive summary of this PDF document in clear, organized sections:\n\n'+allText.substring(0,8000);
     else if(mode==='keypoints')prompt='Extract the most important key points, facts, and findings from this document as a numbered list:\n\n'+allText.substring(0,8000);
@@ -2405,9 +2416,20 @@ async function translatePDF(){
   try{
     showProg('translate-pdf','Extracting text...',10);var buf=await file.arrayBuffer();var maxPages=parseInt(document.getElementById('transMaxPages').value)||5;
     var pdfJsDoc=null;try{var lt=pdfjsLib.getDocument({data:new Uint8Array(buf)});pdfJsDoc=await lt.promise;}catch(e){showToast('PDF load failed','error');hideProg('translate-pdf');if(btn){btn.disabled=false;btn.textContent='🌐 Translate PDF';}return;}
-    var totalPages=Math.min(pdfJsDoc.numPages,maxPages);var allText='';
-    for(var i=0;i<totalPages;i++){showProg('translate-pdf','Extracting page '+(i+1)+'/'+totalPages+'...',10+Math.round(i/totalPages*30));try{var page=await pdfJsDoc.getPage(i+1);var tc=await page.getTextContent();allText+='[Page '+(i+1)+']\n'+tc.items.map(function(it){return it.str;}).join(' ')+'\n\n';}catch(e){}}
+    var totalPages=Math.min(pdfJsDoc.numPages,maxPages);var allText='';var ocrUsed=false;
+    for(var i=0;i<totalPages;i++){
+      showProg('translate-pdf','Extracting page '+(i+1)+'/'+totalPages+'...',10+Math.round(i/totalPages*30));
+      var pageText='';
+      try{var page=await pdfJsDoc.getPage(i+1);var tc=await page.getTextContent();pageText=tc.items.map(function(it){return it.str;}).join(' ').trim();}catch(e){}
+      if(pageText.length<15){
+        showProg('translate-pdf','Page '+(i+1)+' scanned lagta hai, OCR kar rahe hain...',10+Math.round(i/totalPages*30));
+        try{var imgData=await renderPageToDataURL(pdfJsDoc,i,1.6);if(imgData){pageText=await runOCR(imgData);ocrUsed=true;}}catch(e){}
+      }
+      allText+='[Page '+(i+1)+']\n'+pageText+'\n\n';
+    }
+    try{await terminateOCRWorker();}catch(e){}
     if(!allText.trim()){showToast('PDF mein text nahi mila','error');hideProg('translate-pdf');if(btn){btn.disabled=false;btn.textContent='🌐 Translate PDF';}return;}
+    if(ocrUsed)showToast('Scanned pages OCR se padhe gaye ✅','success');
     var lang=document.getElementById('transLang').value||'Hindi';
     var prompt='Translate the following document text to '+lang+'. Keep the structure and page markers intact:\n\n'+allText.substring(0,6000);
     showProg('translate-pdf','Translating with AI...',60);
